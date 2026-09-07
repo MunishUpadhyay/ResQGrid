@@ -547,12 +547,27 @@ def push_to_websocket(self, incident_id: str, coord_result: dict = None):
                     triage_out = agent_outputs.get("triage", {})
                     rights_out = agent_outputs.get("rights", {})
                     
-                    is_legal_dom = incident.domain in ["legal", "cross"]
-                    default_auth_type = "DLSA" if is_legal_dom else ("Chief Medical Officer (CMO)" if incident.domain in ["health", "emergency"] else "Municipal Corporation")
-                    default_auth_contact = "National Legal Services Authority (NALSA)" if is_legal_dom else ("District Health Department (CMO Office)" if incident.domain in ["health", "emergency"] else "Local Municipal Authority")
+                    from apps.agents.directory import resolve_authority
 
-                    nearest_authority_type = (rights_out or {}).get("nearest_authority_type") or (triage_out or {}).get("nearest_authority_type") or default_auth_type
-                    authority_to_contact = (rights_out or {}).get("authority_to_contact") or (triage_out or {}).get("authority_to_contact") or default_auth_contact
+                    eff_dom = incident.domain or "civic"
+                    if eff_dom in ["cross", "cross_domain"]:
+                        cr = (coord or {}).get("conflict_resolution") or {}
+                        p_prio = str(cr.get("primary_priority", "")).lower()
+                        if "health" in p_prio or "medical" in p_prio:
+                            eff_dom = "health"
+                        elif "legal" in p_prio:
+                            eff_dom = "legal"
+                        elif (rights_out or {}).get("authority_to_contact"):
+                            eff_dom = "legal"
+                        elif (triage_out or {}).get("authority_to_contact"):
+                            eff_dom = "health"
+
+                    raw_auth = (rights_out or {}).get("authority_to_contact") or (triage_out or {}).get("authority_to_contact")
+                    raw_type = (rights_out or {}).get("nearest_authority_type") or (triage_out or {}).get("nearest_authority_type")
+
+                    auth_res = resolve_authority(eff_dom, authority_hint=raw_auth, nearest_type_hint=raw_type)
+                    nearest_authority_type = auth_res["nearest_authority_type"]
+                    authority_to_contact = auth_res["authority_to_contact"]
 
                     translation_payload = {
                         "situation_title": coord.get("situation_title", ""),

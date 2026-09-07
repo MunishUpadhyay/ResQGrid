@@ -20,7 +20,7 @@ from typing import List, Optional, Literal
 from pydantic import BaseModel, Field, ConfigDict
 
 from .base import BaseAgent
-from .directory import sanitize_contact_number, sanitize_text_contacts
+from .directory import sanitize_contact_number, sanitize_text_contacts, resolve_authority
 from .legal_reference import validate_legal_citation
 from rag.retriever import retrieve_legal_provisions, retrieve_medical_protocols
 
@@ -351,20 +351,17 @@ class RightsAgent(BaseAgent):
         if "severity" not in result:
             result["severity"] = "medium"
             
-        # Sanitize authority_to_contact
-        raw_auth = result.get("authority_to_contact") or "Local Legal Services Authority"
-        result["authority_to_contact"] = sanitize_text_contacts(raw_auth)
-        
+        # Resolve authority_to_contact and nearest_authority_type deterministically
+        raw_auth = result.get("authority_to_contact")
+        raw_nat = result.get("nearest_authority_type")
+        auth_res = resolve_authority("legal", authority_hint=raw_auth, nearest_type_hint=raw_nat)
+        result["authority_to_contact"] = auth_res["authority_to_contact"]
+        result["nearest_authority_type"] = auth_res["nearest_authority_type"]
+
         try:
             result["case_strength"] = float(result.get("case_strength", 0.5))
         except (ValueError, TypeError):
             result["case_strength"] = 0.5
-
-        # Validate nearest_authority_type
-        valid_authorities = {"DLSA", "High Court", "Consumer Forum", "Labour Court", "Police Complaint Authority", "Magistrate Court"}
-        nat = result.get("nearest_authority_type")
-        if nat not in valid_authorities:
-            result["nearest_authority_type"] = "DLSA"
 
         # Validate and sanitize legal_timeline
         timeline = result.get("legal_timeline")
@@ -826,28 +823,24 @@ class CoordinationAgent(BaseAgent):
         if not isinstance(result.get("resources_needed"), list):
             result["resources_needed"] = []
             
-        # Clean authorities to notify: remove non-relevant 112 / legal-aid helplines for routine civic cases
+        # Resolve authorities_to_notify deterministically
         auths = result.get("authorities_to_notify")
         if not isinstance(auths, list):
             auths = []
-        is_health_only = eff_domain in ["health", "emergency"] and eff_domain not in ["cross_domain", "cross"]
 
         cleaned_auths = []
         for a in auths:
             a_str = str(a).strip()
-            a_lower = a_str.lower()
-            if is_civic_domain:
-                if any(bad in a_lower for bad in ["112", "emergency help", "108", "ambulance", "15100", "nalsa", "dlsa", "legal services"]):
-                    continue
-            elif is_health_only:
-                if any(bad in a_lower for bad in ["15100", "nalsa", "dlsa", "legal services", "legal aid", "labour court"]):
-                    continue
-            cleaned_auths.append(a_str)
+            if not a_str:
+                continue
+            resolved = resolve_authority(eff_domain, authority_hint=a_str)
+            auth_name = resolved["authority_to_contact"]
+            if auth_name not in cleaned_auths:
+                cleaned_auths.append(auth_name)
 
-        if is_civic_domain and not cleaned_auths:
-            cleaned_auths = ["Municipal Corporation / Public Works Department (PWD)", "Local Traffic Police"]
-        elif is_health_only and not cleaned_auths:
-            cleaned_auths = ["Chief Medical Officer (CMO)", "Primary Health Center (PHC)"]
+        if not cleaned_auths:
+            primary_res = resolve_authority(eff_domain)
+            cleaned_auths.append(primary_res["authority_to_contact"])
 
         result["authorities_to_notify"] = cleaned_auths
 
@@ -879,27 +872,18 @@ class CoordinationAgent(BaseAgent):
         else:
             result["conflict_resolution"] = None
 
-        # Validate escalation_path
+        # Validate and resolve escalation_path deterministically
         ep = result.get("escalation_path")
         if not isinstance(ep, list) or len(ep) == 0:
-            if is_civic_domain:
-                result["escalation_path"] = [
-                    {
-                        "level": 1,
-                        "authority": "Municipal Commissioner / Ward Officer",
-                        "trigger": "If initial report remains unaddressed",
-                        "contact": "Verified contact unavailable"
-                    }
-                ]
-            else:
-                result["escalation_path"] = [
-                    {
-                        "level": 1,
-                        "authority": "District Magistrate / Competent Authority",
-                        "trigger": "If initial report remains unaddressed",
-                        "contact": "Verified contact unavailable"
-                    }
-                ]
+            primary_res = resolve_authority(eff_domain)
+            result["escalation_path"] = [
+                {
+                    "level": 1,
+                    "authority": primary_res["authority_to_contact"],
+                    "trigger": "If initial report remains unaddressed",
+                    "contact": primary_res["contact"]
+                }
+            ]
         else:
             validated_ep = []
             for item in ep:
@@ -908,20 +892,25 @@ class CoordinationAgent(BaseAgent):
                         level_num = int(item.get("level", len(validated_ep) + 1))
                     except (ValueError, TypeError):
                         level_num = len(validated_ep) + 1
-                    raw_contact = str(item.get("contact", "Verified contact unavailable")).strip()
                     
+                    raw_auth = str(item.get("authority", "")).strip()
+                    resolved_auth = resolve_authority(eff_domain, authority_hint=raw_auth)
+                    
+                    raw_contact = str(item.get("contact", "Verified contact unavailable")).strip()
                     trigger_str = str(item.get("trigger", "If report remains unaddressed")).strip()
                     if is_civic_domain:
-                        # Clean SLA triggers like "after 24 hours" / "after 48 hours" in civic cases
                         trigger_str = re.sub(r'after \d+ (hours?|days?)', 'if initial complaint remains unaddressed', trigger_str, flags=re.IGNORECASE)
                         trigger_str = re.sub(r'within \d+ (minutes?|hours?)', 'if initial complaint remains unaddressed', trigger_str, flags=re.IGNORECASE)
                         if any(bad in raw_contact.lower() for bad in ["112", "15100", "dlsa", "nalsa"]):
                             raw_contact = "Verified contact unavailable"
                             
                     sanitized_contact = sanitize_contact_number(raw_contact)
+                    if sanitized_contact == "Verified contact unavailable" and resolved_auth.get("verified"):
+                        sanitized_contact = resolved_auth["contact"]
+
                     validated_ep.append({
                         "level": level_num,
-                        "authority": str(item.get("authority", "District Authority")),
+                        "authority": resolved_auth["authority_to_contact"],
                         "trigger": trigger_str,
                         "contact": sanitized_contact
                     })

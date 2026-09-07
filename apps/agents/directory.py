@@ -138,6 +138,247 @@ def _unavailable_record(authority_name: str, jurisdiction: str) -> dict:
     }
 
 
+# Master canonical domain authority mapping
+# Used by resolve_authority() as the centralized source of truth.
+CANONICAL_DOMAIN_AUTHORITIES = {
+    "legal": {
+        "primary": {
+            "authority_to_contact": "National Legal Services Authority (NALSA)",
+            "nearest_authority_type": "DLSA",
+            "contact": "15100",
+            "verified": True
+        },
+        "subtypes": {
+            "dlsa": {
+                "authority_to_contact": "National Legal Services Authority (NALSA)",
+                "nearest_authority_type": "DLSA",
+                "contact": "15100",
+                "verified": True
+            },
+            "nalsa": {
+                "authority_to_contact": "National Legal Services Authority (NALSA)",
+                "nearest_authority_type": "DLSA",
+                "contact": "15100",
+                "verified": True
+            },
+            "labour": {
+                "authority_to_contact": "Ministry of Labour & Employment (Labour Commissioner)",
+                "nearest_authority_type": "Labour Court",
+                "contact": "14434",
+                "verified": True
+            },
+            "consumer": {
+                "authority_to_contact": "National Consumer Helpline / Consumer Commission",
+                "nearest_authority_type": "Consumer Forum",
+                "contact": "1915",
+                "verified": True
+            },
+            "high court": {
+                "authority_to_contact": "High Court Legal Services Committee",
+                "nearest_authority_type": "High Court",
+                "contact": "15100",
+                "verified": True
+            },
+            "police complaint": {
+                "authority_to_contact": "Police Complaint Authority",
+                "nearest_authority_type": "Police Complaint Authority",
+                "contact": "100",
+                "verified": True
+            },
+            "magistrate": {
+                "authority_to_contact": "Judicial Magistrate Court",
+                "nearest_authority_type": "Magistrate Court",
+                "contact": "15100",
+                "verified": True
+            }
+        }
+    },
+    "health": {
+        "primary": {
+            "authority_to_contact": "District Health Department (CMO Office)",
+            "nearest_authority_type": "Chief Medical Officer (CMO)",
+            "contact": "108",
+            "verified": True
+        },
+        "subtypes": {
+            "cmo": {
+                "authority_to_contact": "District Health Department (CMO Office)",
+                "nearest_authority_type": "Chief Medical Officer (CMO)",
+                "contact": "108",
+                "verified": True
+            },
+            "ambulance": {
+                "authority_to_contact": "National Ambulance Service",
+                "nearest_authority_type": "Chief Medical Officer (CMO)",
+                "contact": "108",
+                "verified": True
+            },
+            "pregnancy": {
+                "authority_to_contact": "Janani Shishu Suraksha Karyakram (JSSK)",
+                "nearest_authority_type": "Chief Medical Officer (CMO)",
+                "contact": "102",
+                "verified": True
+            },
+            "mental": {
+                "authority_to_contact": "Tele-MANAS Mental Health Helpline",
+                "nearest_authority_type": "Chief Medical Officer (CMO)",
+                "contact": "14416",
+                "verified": True
+            },
+            "phc": {
+                "authority_to_contact": "Primary Health Center (PHC)",
+                "nearest_authority_type": "Chief Medical Officer (CMO)",
+                "contact": "Verified contact unavailable",
+                "verified": False
+            }
+        }
+    },
+    "emergency": {
+        "primary": {
+            "authority_to_contact": "National Emergency Helpline",
+            "nearest_authority_type": "Emergency Response Center",
+            "contact": "112",
+            "verified": True
+        },
+        "subtypes": {
+            "police": {
+                "authority_to_contact": "Police Control Room",
+                "nearest_authority_type": "Police Control Room",
+                "contact": "100",
+                "verified": True
+            },
+            "fire": {
+                "authority_to_contact": "Fire Emergency Services",
+                "nearest_authority_type": "Fire Control Room",
+                "contact": "101",
+                "verified": True
+            },
+            "ambulance": {
+                "authority_to_contact": "National Ambulance Service",
+                "nearest_authority_type": "Chief Medical Officer (CMO)",
+                "contact": "108",
+                "verified": True
+            },
+            "disaster": {
+                "authority_to_contact": "National Emergency Helpline",
+                "nearest_authority_type": "Disaster Management Authority",
+                "contact": "112",
+                "verified": True
+            }
+        }
+    },
+    "civic": {
+        "primary": {
+            "authority_to_contact": "Local Municipal Authority",
+            "nearest_authority_type": "Municipal Corporation",
+            "contact": "Verified contact unavailable",
+            "verified": False
+        },
+        "subtypes": {
+            "municipal": {
+                "authority_to_contact": "Local Municipal Authority",
+                "nearest_authority_type": "Municipal Corporation",
+                "contact": "Verified contact unavailable",
+                "verified": False
+            },
+            "pwd": {
+                "authority_to_contact": "Public Works Department (PWD)",
+                "nearest_authority_type": "Public Works Department (PWD)",
+                "contact": "Verified contact unavailable",
+                "verified": False
+            },
+            "traffic": {
+                "authority_to_contact": "Local Traffic Police Division",
+                "nearest_authority_type": "Traffic Police",
+                "contact": "100",
+                "verified": True
+            },
+            "ward": {
+                "authority_to_contact": "Municipal Ward Office",
+                "nearest_authority_type": "Municipal Corporation",
+                "contact": "Verified contact unavailable",
+                "verified": False
+            }
+        }
+    }
+}
+
+
+def resolve_authority(
+    domain: str,
+    authority_hint: str = None,
+    nearest_type_hint: str = None
+) -> dict:
+    """
+    Deterministic domain-aware authority resolution.
+    
+    Resolves authority suggestions against canonical domain authority records.
+    Never trusts arbitrary LLM authority strings as final truth.
+    Rejects domain-incompatible authority hints (e.g. NALSA for civic domain).
+    Returns dict:
+        {
+            "authority_to_contact": str,
+            "nearest_authority_type": str,
+            "contact": str,
+            "verified": bool
+        }
+    """
+    dom_clean = str(domain or "").strip().lower()
+    if dom_clean in ["cross", "cross_domain"]:
+        hint_text = f"{authority_hint or ''} {nearest_type_hint or ''}".lower()
+        if any(w in hint_text for w in ["cmo", "hospital", "medical", "ambulance", "doctor", "health"]):
+            dom_clean = "health"
+        elif any(w in hint_text for w in ["dlsa", "nalsa", "court", "legal", "lawyer", "police complaint"]):
+            dom_clean = "legal"
+        elif any(w in hint_text for w in ["fire", "disaster", "emergency 112"]):
+            dom_clean = "emergency"
+        elif any(w in hint_text for w in ["municipal", "pwd", "pothole", "civic", "garbage"]):
+            dom_clean = "civic"
+        else:
+            dom_clean = "legal"
+
+    if dom_clean not in CANONICAL_DOMAIN_AUTHORITIES:
+        dom_clean = "civic"
+
+    domain_config = CANONICAL_DOMAIN_AUTHORITIES[dom_clean]
+    primary_rec = domain_config["primary"].copy()
+
+    combined_hint = f"{authority_hint or ''} {nearest_type_hint or ''}".strip().lower()
+    if not combined_hint:
+        return primary_rec
+
+    # Reject domain-incompatible authority hints
+    incompatible_keywords = {
+        "civic": ["nalsa", "dlsa", "legal services", "15100", "court", "labour court", "consumer forum", "cmo", "hospital", "ambulance"],
+        "health": ["nalsa", "dlsa", "legal services", "15100", "labour court", "consumer forum", "pwd", "municipal"],
+        "legal": ["cmo office", "cmo department", "hospital admission", "pwd", "municipal corporation"],
+        "emergency": ["nalsa", "dlsa", "legal aid", "15100", "consumer forum", "labour court"]
+    }
+
+    bad_kws = incompatible_keywords.get(dom_clean, [])
+    if any(bad_kw in combined_hint for bad_kw in bad_kws):
+        return primary_rec
+
+    # Check for canonical subtype match
+    subtypes = domain_config.get("subtypes", {})
+    for key, record in subtypes.items():
+        if key in combined_hint:
+            return record.copy()
+
+    # If hint matches a verified helpline record in VERIFIED_DIRECTORY, format output cleanly
+    if authority_hint:
+        record_from_ver = get_verified_contact(authority_hint)
+        if record_from_ver and record_from_ver.get("verified"):
+            return {
+                "authority_to_contact": record_from_ver["authority"],
+                "nearest_authority_type": primary_rec["nearest_authority_type"],
+                "contact": record_from_ver["contact"],
+                "verified": True
+            }
+
+    return primary_rec
+
+
 def sanitize_contact_number(number: str) -> str:
     """
     Deterministic safety check to filter out fake/placeholder numbers.

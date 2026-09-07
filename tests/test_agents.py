@@ -541,9 +541,9 @@ def test_rights_agent_validation_and_sanitization():
     
     # Verify section 999 is NOT verified
     assert result["legal_provisions"][0]["verified"] is False
-    # Verify authority contact is sanitized
+    # Verify authority contact is sanitized and resolved to canonical authority
     assert "01234-567890" not in result["authority_to_contact"]
-    assert "Verified contact unavailable" in result["authority_to_contact"]
+    assert result["authority_to_contact"] == "National Legal Services Authority (NALSA)"
 
 
 def test_legal_notice_agent_contact_safety():
@@ -799,6 +799,84 @@ def test_civic_report_severity_pipeline_aggregation(monkeypatch):
     incident.refresh_from_db()
     assert incident.severity_score == 0.25  # 0.25 from SEVERITY_MAP["low"]
     assert incident.severity_label == "low"
+
+
+# ---------------------------------------------------------------------------
+# Deterministic Authority Routing Tests (Fix #2)
+# ---------------------------------------------------------------------------
+
+def test_authority_resolution_legal_canonical():
+    from apps.agents.directory import resolve_authority
+    res = resolve_authority("legal", authority_hint="Labour Court")
+    assert res["nearest_authority_type"] == "Labour Court"
+    assert res["authority_to_contact"] == "Ministry of Labour & Employment (Labour Commissioner)"
+    assert res["contact"] == "14434"
+    assert res["verified"] is True
+
+
+def test_authority_resolution_civic_rejects_legal_nalsa():
+    from apps.agents.directory import resolve_authority
+    # Civic report with invalid suggestion of NALSA/DLSA must reject hint and return civic authority
+    res = resolve_authority("civic", authority_hint="National Legal Services Authority (NALSA)")
+    assert res["authority_to_contact"] == "Local Municipal Authority"
+    assert res["nearest_authority_type"] == "Municipal Corporation"
+    assert res["contact"] == "Verified contact unavailable"
+
+
+def test_authority_resolution_health_rejects_unrelated_legal():
+    from apps.agents.directory import resolve_authority
+    # Health report with invalid suggestion of DLSA must reject hint and return health authority
+    res = resolve_authority("health", authority_hint="DLSA Legal Aid")
+    assert res["authority_to_contact"] == "District Health Department (CMO Office)"
+    assert res["nearest_authority_type"] == "Chief Medical Officer (CMO)"
+    assert res["contact"] == "108"
+
+
+def test_authority_resolution_emergency_valid():
+    from apps.agents.directory import resolve_authority
+    res = resolve_authority("emergency", authority_hint="Police")
+    assert res["authority_to_contact"] == "Police Control Room"
+    assert res["contact"] == "100"
+    assert res["verified"] is True
+
+
+def test_authority_resolution_unknown_authority():
+    from apps.agents.directory import resolve_authority
+    res = resolve_authority("civic", authority_hint="Random Unknown Dept 123")
+    assert res["authority_to_contact"] == "Local Municipal Authority"
+    assert res["nearest_authority_type"] == "Municipal Corporation"
+
+
+def test_authority_resolution_missing_hint_fallback():
+    from apps.agents.directory import resolve_authority
+    res_civic = resolve_authority("civic", authority_hint=None)
+    assert res_civic["authority_to_contact"] == "Local Municipal Authority"
+
+    res_health = resolve_authority("health", authority_hint=None)
+    assert res_health["authority_to_contact"] == "District Health Department (CMO Office)"
+
+
+def test_authority_resolution_unverified_contact_string():
+    from apps.agents.directory import resolve_authority
+    res = resolve_authority("civic", authority_hint="Public Works Department (PWD)")
+    assert res["contact"] == "Verified contact unavailable"
+    assert res["verified"] is False
+
+
+def test_authority_resolution_cross_domain_health_priority():
+    from apps.agents.directory import resolve_authority
+    res = resolve_authority("cross_domain", authority_hint="District Health Department")
+    assert res["authority_to_contact"] == "District Health Department (CMO Office)"
+    assert res["nearest_authority_type"] == "Chief Medical Officer (CMO)"
+
+
+def test_existing_contact_sanitization():
+    from apps.agents.directory import sanitize_contact_number, sanitize_text_contacts
+    assert sanitize_contact_number("108") == "108"
+    assert sanitize_contact_number("01234-567890") == "Verified contact unavailable"
+    assert sanitize_contact_number("1800-HOME-SEC") == "Verified contact unavailable"
+    assert "Verified contact unavailable" in sanitize_text_contacts("Call 01234-567890 immediately")
+
 
 
 

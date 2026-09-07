@@ -302,7 +302,31 @@ def citizen_signal_status_api(request, signal_id):
             lang_out = lang_data.get(pref_lang, {}) if isinstance(lang_data.get(pref_lang), dict) else (lang_data.get("hindi", {}) if isinstance(lang_data.get("hindi"), dict) else {})
             rights_out = outputs.get("rights", {}) if isinstance(outputs.get("rights"), dict) else {}
             triage_out = outputs.get("triage", {}) if isinstance(outputs.get("triage"), dict) else {}
-            
+            from apps.agents.directory import resolve_authority
+
+            eff_dom = incident.domain or "civic"
+            cr = coord_out.get("conflict_resolution") if isinstance(coord_out.get("conflict_resolution"), dict) else {}
+            p_prio = str(cr.get("primary_priority", "")).lower()
+
+            if eff_dom in ["cross", "cross_domain"]:
+                if "health" in p_prio or "medical" in p_prio:
+                    eff_dom = "health"
+                elif "legal" in p_prio:
+                    eff_dom = "legal"
+                elif rights_out.get("authority_to_contact"):
+                    eff_dom = "legal"
+                elif triage_out.get("authority_to_contact"):
+                    eff_dom = "health"
+                else:
+                    eff_dom = "health" if "triage" in outputs else "legal"
+
+            raw_auth_hint = rights_out.get("authority_to_contact") or triage_out.get("authority_to_contact")
+            raw_type_hint = rights_out.get("nearest_authority_type") or triage_out.get("nearest_authority_type")
+            auth_resolved = resolve_authority(eff_dom, authority_hint=raw_auth_hint, nearest_type_hint=raw_type_hint)
+
+            res_nearest_type = auth_resolved["nearest_authority_type"]
+            res_auth_contact = auth_resolved["authority_to_contact"]
+
             result = {
                 "incident_id": str(incident.id),
                 "severity_label": incident.severity_label,
@@ -320,10 +344,10 @@ def citizen_signal_status_api(request, signal_id):
                 "legal_provisions_hi": lang_out.get("legal_provisions", []),
                 "legal_timeline": rights_out.get("legal_timeline", []),
                 "legal_timeline_hi": lang_out.get("legal_timeline", []),
-                "nearest_authority_type": rights_out.get("nearest_authority_type") or triage_out.get("nearest_authority_type") or ("DLSA" if incident.domain in ["legal", "cross"] else ("Chief Medical Officer (CMO)" if incident.domain in ["health", "emergency"] else "Municipal Corporation")),
-                "nearest_authority_type_hi": lang_out.get("nearest_authority_type") or rights_out.get("nearest_authority_type") or triage_out.get("nearest_authority_type") or ("DLSA" if incident.domain in ["legal", "cross"] else ("Chief Medical Officer (CMO)" if incident.domain in ["health", "emergency"] else "Municipal Corporation")),
-                "authority_to_contact": rights_out.get("authority_to_contact") or triage_out.get("authority_to_contact") or ("National Legal Services Authority (NALSA)" if incident.domain in ["legal", "cross"] else ("District Health Department (CMO Office)" if incident.domain in ["health", "emergency"] else "Local Municipal Authority")),
-                "authority_to_contact_hi": lang_out.get("authority_to_contact") or rights_out.get("authority_to_contact") or triage_out.get("authority_to_contact") or ("National Legal Services Authority (NALSA)" if incident.domain in ["legal", "cross"] else ("District Health Department (CMO Office)" if incident.domain in ["health", "emergency"] else "Local Municipal Authority")),
+                "nearest_authority_type": res_nearest_type,
+                "nearest_authority_type_hi": lang_out.get("nearest_authority_type") or res_nearest_type,
+                "authority_to_contact": res_auth_contact,
+                "authority_to_contact_hi": lang_out.get("authority_to_contact") or res_auth_contact,
                 "triage_severity": triage_out.get("triage_severity", ""),
                 "hospital_denial_detected": triage_out.get("hospital_denial_detected", False),
                 
