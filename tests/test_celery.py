@@ -170,3 +170,62 @@ def test_pipeline_idempotency_prevents_duplicate_calls(monkeypatch, mock_groq):
     # Load incident outputs and confirm triage data is preserved
     incident.refresh_from_db()
     assert incident.agent_outputs["triage"] == mock_triage
+
+
+def test_worker_recycling_counter_filtering(settings, monkeypatch):
+    import pipeline.tasks as tasks_module
+
+    settings.CELERY_TASK_ALWAYS_EAGER = False
+    # Reset global counter
+    monkeypatch.setattr(tasks_module, "COMPLETED_REPORT_COUNT", 0)
+
+    # 1. Intermediate pipeline tasks should NOT increment counter
+    tasks_module.recycle_worker_on_report_count(
+        sender=ingest_signal, state="SUCCESS"
+    )
+    assert tasks_module.COMPLETED_REPORT_COUNT == 0
+
+    tasks_module.recycle_worker_on_report_count(
+        sender=route_to_agents, state="SUCCESS"
+    )
+    assert tasks_module.COMPLETED_REPORT_COUNT == 0
+
+    # 2. Failed or retried push_to_websocket tasks should NOT increment counter
+    tasks_module.recycle_worker_on_report_count(
+        sender=push_to_websocket, state="FAILURE"
+    )
+    assert tasks_module.COMPLETED_REPORT_COUNT == 0
+
+    tasks_module.recycle_worker_on_report_count(
+        sender=push_to_websocket, state="RETRY"
+    )
+    assert tasks_module.COMPLETED_REPORT_COUNT == 0
+
+    # 3. Successful push_to_websocket SHOULD increment counter
+    tasks_module.recycle_worker_on_report_count(
+        sender=push_to_websocket, state="SUCCESS"
+    )
+    assert tasks_module.COMPLETED_REPORT_COUNT == 1
+
+
+def test_worker_recycles_at_exact_5_completed_reports(settings, monkeypatch):
+    import pipeline.tasks as tasks_module
+    from celery.exceptions import WorkerShutdown
+
+    settings.CELERY_TASK_ALWAYS_EAGER = False
+    monkeypatch.setattr(tasks_module, "COMPLETED_REPORT_COUNT", 0)
+
+    # Run 4 successful report completions -> no recycle requested
+    for i in range(1, 5):
+        tasks_module.recycle_worker_on_report_count(
+            sender=push_to_websocket, state="SUCCESS"
+        )
+        assert tasks_module.COMPLETED_REPORT_COUNT == i
+
+    # 5th successful report completion MUST trigger recycle (WorkerShutdown or SystemExit)
+    with pytest.raises((WorkerShutdown, SystemExit)):
+        tasks_module.recycle_worker_on_report_count(
+            sender=push_to_websocket, state="SUCCESS"
+        )
+
+

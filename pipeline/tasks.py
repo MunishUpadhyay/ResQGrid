@@ -12,13 +12,56 @@ Execution flow:
 
 """
 
+import sys
 import logging
 from datetime import datetime, timezone
 from asgiref.sync import async_to_sync
 from celery import shared_task
+from celery.signals import task_postrun
 from channels.layers import get_channel_layer
 
 logger = logging.getLogger(__name__)
+
+from django.conf import settings
+
+# Track completed full report pipeline executions for memory recycling
+COMPLETED_REPORT_COUNT = 0
+MAX_REPORTS_PER_WORKER = 5
+
+
+@task_postrun.connect
+def recycle_worker_on_report_count(sender=None, task_id=None, task=None, args=None, kwargs=None, retval=None, state=None, **extra):
+    """
+    Post-run signal listener to track successful report pipeline completions.
+    Recycles the Celery worker process after MAX_REPORTS_PER_WORKER (5) completed reports
+    to prevent RSS memory accumulation under Render's 512 MB memory limit.
+    """
+    global COMPLETED_REPORT_COUNT
+
+    # Bypassed in synchronous eager execution (e.g. test environments)
+    if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+        return
+
+    task_name = getattr(sender, "name", None) or (task.name if task else None)
+    if task_name == "pipeline.push_to_websocket" and state == "SUCCESS":
+        COMPLETED_REPORT_COUNT += 1
+        logger.info(
+            "[Celery Worker Recycle] Report pipeline completed successfully (%d/%d).",
+            COMPLETED_REPORT_COUNT, MAX_REPORTS_PER_WORKER
+        )
+        if COMPLETED_REPORT_COUNT >= MAX_REPORTS_PER_WORKER:
+            logger.warning(
+                "[Celery Worker Recycle] Reached %d completed report pipelines. "
+                "Requesting clean worker process exit for RSS recycling.",
+                COMPLETED_REPORT_COUNT
+            )
+            COMPLETED_REPORT_COUNT = 0
+            try:
+                from celery.exceptions import WorkerShutdown
+                raise WorkerShutdown("Completed maximum report task limit for process recycling")
+            except ImportError:
+                sys.exit(0)
+
 
 
 def is_retryable_exception(exc) -> bool:
