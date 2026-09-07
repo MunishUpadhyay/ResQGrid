@@ -807,11 +807,18 @@ def test_civic_report_severity_pipeline_aggregation(monkeypatch):
 
 def test_authority_resolution_legal_canonical():
     from apps.agents.directory import resolve_authority
+    # Generic Labour Court resolves to Labour Court authority type, but contact is "Verified contact unavailable"
     res = resolve_authority("legal", authority_hint="Labour Court")
     assert res["nearest_authority_type"] == "Labour Court"
-    assert res["authority_to_contact"] == "Ministry of Labour & Employment (Labour Commissioner)"
-    assert res["contact"] == "14434"
-    assert res["verified"] is True
+    assert "Labour" in res["authority_to_contact"]
+    assert res["contact"] == "Verified contact unavailable"
+    assert res["verified"] is False
+
+    # Specific e-Shram helpdesk hint explicitly resolves to e-Shram helpline 14434
+    res_eshram = resolve_authority("legal", authority_hint="e-Shram")
+    assert res_eshram["nearest_authority_type"] == "Labour Court"
+    assert res_eshram["contact"] == "14434"
+    assert res_eshram["verified"] is True
 
 
 def test_authority_resolution_civic_rejects_legal_nalsa():

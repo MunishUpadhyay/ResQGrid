@@ -162,7 +162,13 @@ CANONICAL_DOMAIN_AUTHORITIES = {
                 "verified": True
             },
             "labour": {
-                "authority_to_contact": "Ministry of Labour & Employment (Labour Commissioner)",
+                "authority_to_contact": "Ministry of Labour & Employment / Labour Court",
+                "nearest_authority_type": "Labour Court",
+                "contact": "Verified contact unavailable",
+                "verified": False
+            },
+            "shram": {
+                "authority_to_contact": "Ministry of Labour & Employment (e-Shram Helpline)",
                 "nearest_authority_type": "Labour Court",
                 "contact": "14434",
                 "verified": True
@@ -182,14 +188,14 @@ CANONICAL_DOMAIN_AUTHORITIES = {
             "police complaint": {
                 "authority_to_contact": "Police Complaint Authority",
                 "nearest_authority_type": "Police Complaint Authority",
-                "contact": "100",
-                "verified": True
+                "contact": "Verified contact unavailable",
+                "verified": False
             },
             "magistrate": {
                 "authority_to_contact": "Judicial Magistrate Court",
                 "nearest_authority_type": "Magistrate Court",
-                "contact": "15100",
-                "verified": True
+                "contact": "Verified contact unavailable",
+                "verified": False
             }
         }
     },
