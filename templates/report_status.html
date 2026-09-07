@@ -736,7 +736,7 @@ function showResult(result) {
     const isHealth = domain === 'health';
     const isLegal = domain === 'legal';
     const isCross = domain === 'cross' || domain === 'cross_domain';
-    const nearestAuth = result.nearest_authority_type || 'DLSA';
+    const nearestAuth = result.nearest_authority_type || (isHealth ? 'Chief Medical Officer' : (isLegal ? 'DLSA' : 'Municipal Corporation'));
     const triageSev = (result.triage_severity || '').toLowerCase();
     const provisions = result.legal_provisions || [];
 
@@ -754,24 +754,37 @@ function showResult(result) {
     const hospDenial = triageSev === 'immediate' || triageSev === 'critical';
     
     if (isHealth) {
-        buttons.push(`
-            <a href="tel:108" class="emergency-card e-108">
-                <span class="ec-name loc-en">Ambulance (Emergency)</span>
-                <span class="ec-name loc-hi" lang="hi">एम्बुलेंस (आपातकालीन)</span>
-                <span class="ec-number">📞 108</span>
-                <span class="ec-when loc-en">24/7 Resuscitation</span>
-                <span class="ec-when loc-hi" lang="hi">24/7 तत्काल सेवा</span>
-            </a>
-        `);
-        buttons.push(`
-            <a href="tel:112" class="emergency-card e-100">
-                <span class="ec-name loc-en">National Emergency</span>
-                <span class="ec-name loc-hi" lang="hi">राष्ट्रीय आपातकाल</span>
-                <span class="ec-number">📞 112</span>
-                <span class="ec-when loc-en">Immediate Dispatch</span>
-                <span class="ec-when loc-hi" lang="hi">त्वरित प्रतिक्रिया</span>
-            </a>
-        `);
+        const isEmergencyHealth = triageSev === 'immediate' || triageSev === 'critical' || (result.severity_score && result.severity_score >= 0.75);
+        if (isEmergencyHealth) {
+            buttons.push(`
+                <a href="tel:108" class="emergency-card e-108">
+                    <span class="ec-name loc-en">Ambulance (Emergency)</span>
+                    <span class="ec-name loc-hi" lang="hi">एम्बुलेंस (आपातकालीन)</span>
+                    <span class="ec-number">📞 108</span>
+                    <span class="ec-when loc-en">24/7 Resuscitation</span>
+                    <span class="ec-when loc-hi" lang="hi">24/7 तत्काल सेवा</span>
+                </a>
+            `);
+            buttons.push(`
+                <a href="tel:112" class="emergency-card e-100">
+                    <span class="ec-name loc-en">National Emergency</span>
+                    <span class="ec-name loc-hi" lang="hi">राष्ट्रीय आपातकाल</span>
+                    <span class="ec-number">📞 112</span>
+                    <span class="ec-when loc-en">Immediate Dispatch</span>
+                    <span class="ec-when loc-hi" lang="hi">त्वरित प्रतिक्रिया</span>
+                </a>
+            `);
+        } else {
+            buttons.push(`
+                <a href="tel:104" class="emergency-card" style="border-color: var(--yellow);">
+                    <span class="ec-name loc-en">Health Advisory Helpline</span>
+                    <span class="ec-name loc-hi" lang="hi">स्वास्थ्य परामर्श हेल्पलाइन</span>
+                    <span class="ec-number" style="color: var(--yellow);">📞 104</span>
+                    <span class="ec-when loc-en">Medical Advice & Routine Consultation</span>
+                    <span class="ec-when loc-hi" lang="hi">चिकित्सा परामर्श एवं सलाह</span>
+                </a>
+            `);
+        }
         if (hospDenial) {
             buttons.push(`
                 <a href="tel:100" class="emergency-card">
@@ -859,8 +872,10 @@ function showResult(result) {
 
     // ── GOLDEN WINDOW (health warning) ───────────
     let goldenWindowHTML = '';
-    if (isHealth && result.golden_window && result.golden_window.time_remaining) {
-        const isImm = (result.golden_window.time_remaining || '').toLowerCase().includes('immediate');
+    const gwTimeStr = (result.golden_window?.time_remaining || '').toLowerCase();
+    const isRoutineGw = gwTimeStr.includes('none') || gwTimeStr.includes('routine') || gwTimeStr.includes('no urgent') || gwTimeStr === 'n/a' || !gwTimeStr;
+    if (isHealth && result.golden_window && result.golden_window.time_remaining && !isRoutineGw) {
+        const isImm = gwTimeStr.includes('immediate');
         const icon = isImm ? '🚨' : '⏱️';
         const gwHi = result.golden_window_hi || {};
         goldenWindowHTML = `
@@ -870,7 +885,6 @@ function showResult(result) {
         <div class="gw-time">${icon} ${(result.golden_window.time_remaining || '').toUpperCase()}</div>
         <p class="gw-consequence loc-en"><strong>If delayed:</strong> ${result.golden_window.consequence_of_delay || ''}</p>
         <p class="gw-consequence loc-hi" lang="hi"><strong>यदि देरी हुई:</strong> ${gwHi.consequence_of_delay || result.golden_window.consequence_of_delay || ''}</p>
-        <a href="tel:108" class="btn-danger" style="width: fit-content;">📞 Call 108 — National Ambulance</a>
     </div>`;
     }
 
@@ -1020,10 +1034,8 @@ function showResult(result) {
                 <span class="loc-hi" lang="hi">${avoidTitleHi}</span>
             </div>
             <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.95rem; line-height: 1.6; color: var(--text-secondary);">
-                <li class="loc-en">Do not attempt self-medication or medical procedures without professional guidance.</li>
-                <li class="loc-hi" lang="hi">पेशेवर मार्गदर्शन के बिना स्वयं दवा लेने या चिकित्सा प्रक्रियाओं का प्रयास न करें।</li>
-                <li class="loc-en">Do not give oral fluids or food if the victim is unconscious or semi-conscious.</li>
-                <li class="loc-hi" lang="hi">यदि पीड़ित बेहोश या अर्ध-बेहोश है तो उसे मुंह से तरल पदार्थ या भोजन न दें।</li>
+                <li class="loc-en">Do not attempt self-medication or unevidenced procedures without professional medical guidance.</li>
+                <li class="loc-hi" lang="hi">पेशेवर चिकित्सा मार्गदर्शन के बिना स्वयं दवा लेने या अमान्य प्रक्रियाओं का प्रयास न करें।</li>
             </ul>
         </div>`;
     } else if (isLegal) {
@@ -1230,8 +1242,8 @@ function showResult(result) {
     }
 
     let contactHTML = '';
-    const authorityType  = result.nearest_authority_type || 'DLSA';
-    const authorityDesc  = result.authority_to_contact   || 'National Legal Services Authority (NALSA)';
+    const authorityType  = result.nearest_authority_type || (isHealth ? 'Chief Medical Officer (CMO)' : 'DLSA');
+    const authorityDesc  = result.authority_to_contact   || (isHealth ? 'District Health Department (CMO Office)' : 'National Legal Services Authority (NALSA)');
     const isNALSA = /dlsa|nalsa/i.test(authorityType + ' ' + authorityDesc);
     const titleText = result.title_en || '';
     const titleTextHi = result.title_hi || titleText || '';
@@ -1417,7 +1429,7 @@ function showResultUnified(result) {
     const isHealth = domain === 'health';
     const isLegal = domain === 'legal';
     const isCross = domain === 'cross' || domain === 'cross_domain';
-    const nearestAuth = result.nearest_authority_type || 'DLSA';
+    const nearestAuth = result.nearest_authority_type || (isHealth ? 'Chief Medical Officer' : (isLegal ? 'DLSA' : 'Municipal Corporation'));
     const triageSev = (result.triage_severity || '').toLowerCase();
     const provisions = result.legal_provisions || [];
 
@@ -1592,8 +1604,10 @@ function showResultUnified(result) {
 
     // ── 04 — IMPORTANT DEADLINES / WARNINGS (Continuous Section 4) ───────────────────
     let goldenWindowHTML = '';
-    if (isHealth && result.golden_window && result.golden_window.time_remaining) {
-        const isImm = (result.golden_window.time_remaining || '').toLowerCase().includes('immediate');
+    const gwTimeStr4 = (result.golden_window?.time_remaining || '').toLowerCase();
+    const isRoutineGw4 = gwTimeStr4.includes('none') || gwTimeStr4.includes('routine') || gwTimeStr4.includes('no urgent') || gwTimeStr4 === 'n/a' || !gwTimeStr4;
+    if (isHealth && result.golden_window && result.golden_window.time_remaining && !isRoutineGw4) {
+        const isImm = gwTimeStr4.includes('immediate');
         const icon = isImm ? '🚨' : '⏱️';
         const gwHi = result.golden_window_hi || {};
         goldenWindowHTML = `
@@ -1631,10 +1645,8 @@ function showResultUnified(result) {
             <li class="loc-hi" lang="hi" style="font-family: 'Noto Sans Devanagari', sans-serif;">मौखिक इलाज के इनकार को स्वीकार न करें। लिखित इनकार या संदर्भ नोट पर जोर दें।</li>`;
     } else if (isHealth) {
         avoidListHTML = `
-            <li class="loc-en">Do not attempt self-medication or medical procedures without professional guidance.</li>
-            <li class="loc-hi" lang="hi" style="font-family: 'Noto Sans Devanagari', sans-serif;">पेशेवर मार्गदर्शन के बिना स्वयं दवा लेने या चिकित्सा प्रक्रियाओं का प्रयास न करें।</li>
-            <li class="loc-en">Do not give oral fluids or food if the victim is unconscious or semi-conscious.</li>
-            <li class="loc-hi" lang="hi" style="font-family: 'Noto Sans Devanagari', sans-serif;">यदि पीड़ित बेहोश या अर्ध-बेहोश है तो उसे मुंह से तरल पदार्थ या भोजन न दें।</li>`;
+            <li class="loc-en">Do not attempt self-medication or unevidenced procedures without professional medical guidance.</li>
+            <li class="loc-hi" lang="hi" style="font-family: 'Noto Sans Devanagari', sans-serif;">पेशेवर चिकित्सा मार्गदर्शन के बिना स्वयं दवा लेने या अमान्य प्रक्रियाओं का प्रयास न करें।</li>`;
     } else if (isLegal) {
         avoidListHTML = `
             <li class="loc-en">Do not sign any statements, settlement drafts, or blank papers without reading them thoroughly.</li>

@@ -504,8 +504,12 @@ def push_to_websocket(self, incident_id: str, coord_result: dict = None):
                     triage_out = agent_outputs.get("triage", {})
                     rights_out = agent_outputs.get("rights", {})
                     
-                    nearest_authority_type = (rights_out or {}).get("nearest_authority_type") or (triage_out or {}).get("nearest_authority_type") or "DLSA"
-                    authority_to_contact = (rights_out or {}).get("authority_to_contact") or (triage_out or {}).get("authority_to_contact") or "National Legal Services Authority (NALSA)"
+                    is_legal_dom = incident.domain in ["legal", "cross"]
+                    default_auth_type = "DLSA" if is_legal_dom else ("Chief Medical Officer (CMO)" if incident.domain in ["health", "emergency"] else "Municipal Corporation")
+                    default_auth_contact = "National Legal Services Authority (NALSA)" if is_legal_dom else ("District Health Department (CMO Office)" if incident.domain in ["health", "emergency"] else "Local Municipal Authority")
+
+                    nearest_authority_type = (rights_out or {}).get("nearest_authority_type") or (triage_out or {}).get("nearest_authority_type") or default_auth_type
+                    authority_to_contact = (rights_out or {}).get("authority_to_contact") or (triage_out or {}).get("authority_to_contact") or default_auth_contact
 
                     translation_payload = {
                         "situation_title": coord.get("situation_title", ""),

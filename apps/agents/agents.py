@@ -563,40 +563,47 @@ class TriageAgent(BaseAgent):
 
         # 8. Deterministic Medical Grounding and Safety Override
         grounded_interventions = []
+        raw_text_lower = signal.raw_text.lower()
+        protocols_title_lower = " ".join([p.get('metadata', {}).get('title', '').lower() for p in protocols]) if protocols else ""
+
         for intervention in result.get("interventions", []):
             inter_lower = intervention.lower()
             
-            # Burns Protocol
-            if "burn" in inter_lower or "scald" in inter_lower or "toothpaste" in inter_lower or "butter" in inter_lower:
-                action = "Apply cool running water for 20 minutes"
-                why = "cooling stops tissue damage and relieves pain"
-                skipped = "trapped heat worsens tissue destruction and increases infection risk"
-                how = "Apply cool, gently running water over the burn area for a minimum of 20 minutes immediately. Do NOT apply ice, butter, toothpaste, oil, or home remedies."
-                intervention = f"{action}: {why} — {skipped} — {how}"
+            # Burns Protocol (only if actual burn/scald/fire is in raw text or protocol title)
+            if ("burn" in raw_text_lower or "scald" in raw_text_lower or "fire" in raw_text_lower or "burn" in protocols_title_lower):
+                if "burn" in inter_lower or "scald" in inter_lower or "toothpaste" in inter_lower or "butter" in inter_lower:
+                    action = "Apply cool running water for 20 minutes"
+                    why = "cooling stops tissue damage and relieves pain"
+                    skipped = "trapped heat worsens tissue destruction and increases infection risk"
+                    how = "Apply cool, gently running water over the burn area for a minimum of 20 minutes immediately. Do NOT apply ice, butter, toothpaste, oil, or home remedies."
+                    intervention = f"{action}: {why} — {skipped} — {how}"
                 
-            # Snake Bite Protocol
-            elif "snake" in inter_lower or "bite" in inter_lower or "venom" in inter_lower:
-                action = "Immobilize limb and seek anti-venom"
-                why = "slowing venom spread is vital before hospital arrival"
-                skipped = "increased circulation spreads venom rapidly throughout the body"
-                how = "Keep the affected limb completely immobilized and at or below heart level. Do NOT cut the wound, do NOT attempt to suck venom out, and do NOT apply a tight arterial tourniquet. Reach hospital with ASV within 2 hours."
-                intervention = f"{action}: {why} — {skipped} — {how}"
+            # Snake Bite Protocol (only if snake/venom/bite is in raw text or protocol title)
+            elif ("snake" in raw_text_lower or "venom" in raw_text_lower or "snake" in protocols_title_lower):
+                if "snake" in inter_lower or "bite" in inter_lower or "venom" in inter_lower:
+                    action = "Immobilize limb and seek anti-venom"
+                    why = "slowing venom spread is vital before hospital arrival"
+                    skipped = "increased circulation spreads venom rapidly throughout the body"
+                    how = "Keep the affected limb completely immobilized and at or below heart level. Do NOT cut the wound, do NOT attempt to suck venom out, and do NOT apply a tight arterial tourniquet. Reach hospital with ASV within 2 hours."
+                    intervention = f"{action}: {why} — {skipped} — {how}"
                 
-            # Spinal Injury Protocol
-            elif "spinal" in inter_lower or "spine" in inter_lower or "neck" in inter_lower or "immobil" in inter_lower:
-                action = "Strict spinal immobilization"
-                why = "prevents secondary permanent neurological damage"
-                skipped = "improper movement can cause permanent spinal cord transection and irreversible paralysis"
-                how = "Do NOT move the patient without proper spinal precautions. Apply a hard cervical collar immediately. Use the 'log roll' technique only, requiring at least three trained responders."
-                intervention = f"{action}: {why} — {skipped} — {how}"
+            # Spinal Injury Protocol (only if spinal trauma/neck injury/fall is in raw text or protocol title)
+            elif ("spinal" in raw_text_lower or "spine" in raw_text_lower or "neck" in raw_text_lower or "spinal" in protocols_title_lower):
+                if "spinal" in inter_lower or "spine" in inter_lower or "neck" in inter_lower or "immobil" in inter_lower:
+                    action = "Strict spinal immobilization"
+                    why = "prevents secondary permanent neurological damage"
+                    skipped = "improper movement can cause permanent spinal cord transection and irreversible paralysis"
+                    how = "Do NOT move the patient without proper spinal precautions. Apply a hard cervical collar immediately. Use the 'log roll' technique only, requiring at least three trained responders."
+                    intervention = f"{action}: {why} — {skipped} — {how}"
                 
-            # STEMI Heart Attack
-            elif "stemi" in inter_lower or "heart attack" in inter_lower or "chest pain" in inter_lower or "aspirin" in inter_lower:
-                action = "Administer Aspirin 325mg to chew"
-                why = "Aspirin prevents further platelet aggregation and arterial clotting"
-                skipped = "blocked coronary artery continues to starve cardiac muscle leading to permanent necrosis"
-                how = "Administer Aspirin 325mg orally (to be chewed immediately, not swallowed whole)."
-                intervention = f"{action}: {why} — {skipped} — {how}"
+            # STEMI Heart Attack (only if heart attack/stemi/chest pain is in raw text or protocol title)
+            elif ("stemi" in raw_text_lower or "heart attack" in raw_text_lower or "chest pain" in raw_text_lower or "stemi" in protocols_title_lower):
+                if "stemi" in inter_lower or "heart attack" in inter_lower or "chest pain" in inter_lower or "aspirin" in inter_lower:
+                    action = "Administer Aspirin 325mg to chew"
+                    why = "Aspirin prevents further platelet aggregation and arterial clotting"
+                    skipped = "blocked coronary artery continues to starve cardiac muscle leading to permanent necrosis"
+                    how = "Administer Aspirin 325mg orally (to be chewed immediately, not swallowed whole)."
+                    intervention = f"{action}: {why} — {skipped} — {how}"
 
             # Hospital Denial Treatment
             elif result.get("hospital_denial_detected") and ("deny" in inter_lower or "refuse" in inter_lower or "admission" in inter_lower):
@@ -776,19 +783,26 @@ class CoordinationAgent(BaseAgent):
         auths = result.get("authorities_to_notify")
         if not isinstance(auths, list):
             auths = []
-        if is_civic_domain:
-            cleaned_auths = []
-            for a in auths:
-                a_str = str(a).strip()
-                a_lower = a_str.lower()
+        is_health_only = eff_domain in ["health", "emergency"] and eff_domain not in ["cross_domain", "cross"]
+
+        cleaned_auths = []
+        for a in auths:
+            a_str = str(a).strip()
+            a_lower = a_str.lower()
+            if is_civic_domain:
                 if any(bad in a_lower for bad in ["112", "emergency help", "108", "ambulance", "15100", "nalsa", "dlsa", "legal services"]):
                     continue
-                cleaned_auths.append(a_str)
-            if not cleaned_auths:
-                cleaned_auths = ["Municipal Corporation / Public Works Department (PWD)", "Local Traffic Police"]
-            result["authorities_to_notify"] = cleaned_auths
-        else:
-            result["authorities_to_notify"] = [str(a) for a in auths]
+            elif is_health_only:
+                if any(bad in a_lower for bad in ["15100", "nalsa", "dlsa", "legal services", "legal aid", "labour court"]):
+                    continue
+            cleaned_auths.append(a_str)
+
+        if is_civic_domain and not cleaned_auths:
+            cleaned_auths = ["Municipal Corporation / Public Works Department (PWD)", "Local Traffic Police"]
+        elif is_health_only and not cleaned_auths:
+            cleaned_auths = ["Chief Medical Officer (CMO)", "Primary Health Center (PHC)"]
+
+        result["authorities_to_notify"] = cleaned_auths
 
         if not result.get("situation_brief"):
             result["situation_brief"] = result.get("what_is_happening", "")[:100] or getattr(signal, "raw_text", "")[:100]

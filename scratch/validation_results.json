@@ -1,0 +1,336 @@
+{
+  "case1": {
+    "title": "CASE 1: PERSISTENT LOWER BACK PAIN",
+    "raw_text": "My father has had persistent lower back pain for about three weeks. It gets worse when he stands for a long time. He has no breathing difficulty, severe bleeding, loss of consciousness, or major recent injury. We have not consulted a doctor yet. What kind of medical professional should we see, what warning signs should we watch for, and what should we do next?",
+    "domain": "health",
+    "severity_label": "low",
+    "severity_score": 0.2,
+    "situation_brief": "The citizen reports that his father is experiencing persistent lower back pain for three weeks, which worsens with prolonged standing. The primary threat is the potential development of serious spinal pathology, indicated by red‑flag symptoms such as leg weakness, numbness, or bowel/bladder dysfunction. No medical consultation has been sought yet, and the father has not taken any specific actions beyond coping with the discomfort. The coordinator should arrange for a prompt referral to an appropriate medical professional (primary care physician, orthopaedic specialist, or physiotherapist) and provide guidance on monitoring red‑flag signs.",
+    "triage": {
+      "triage_severity": "minor",
+      "primary_concern": "Adult patient presenting with persistent lower back pain for three weeks duration. Mechanism: gradual onset, pain worsens with prolonged standing, no recent injury. Current status: stable. Key concerns: \n- Possible underlying spinal pathology (e.g., disc issue) \n- Monitor for red-flag symptoms: leg weakness, numbness, bowel/bladder incontinence, fever, unexplained weight loss",
+      "interventions": [
+        "Seek professional evaluation: Identify underlying cause and appropriate management — Delay may allow condition to worsen or miss serious pathology — Visit a primary care physician, orthopaedic specialist, or physiotherapist; if none available, use telemedicine services for assessment.",
+        "Monitor red-flag signs: Early detection of serious condition — Missing may lead to irreversible neurologic damage — Observe for leg weakness, numbness, bowel/bladder incontinence, fever, or severe unrelenting pain; if any appear, call emergency services (108).",
+        "Use over-the-counter analgesics as per label: Alleviate discomfort — Untreated pain may affect mobility and quality of life — Take acetaminophen or NSAID following package instructions, ensuring no allergy or contraindication."
+      ],
+      "golden_window": {
+        "time_remaining": "None (routine evaluation)",
+        "consequence_of_delay": "Routine medical evaluation recommended without artificial deadline"
+      },
+      "emergency_contacts": [
+        {
+          "name": "National Ambulance",
+          "number": "108",
+          "when_to_call": "If severe back pain is accompanied by leg weakness, numbness, loss of bladder/bowel control, sudden severe pain, or any other emergency sign"
+        },
+        {
+          "name": "Police",
+          "number": "100",
+          "when_to_call": "If the situation escalates to a safety or criminal concern"
+        }
+      ],
+      "required_facility": "clinic",
+      "response_time": "non_urgent",
+      "hospital_denial_detected": false,
+      "confidence": 0.96,
+      "escalate_to_rights_agent": false
+    },
+    "coordination": {
+      "situation_title": "Father experiencing persistent lower back pain worsening with standing",
+      "overall_severity": "low",
+      "overall_severity_score": 0.2,
+      "what_is_happening": "The citizen reports that his father has had continuous lower back pain for three weeks, which intensifies when he stands for long periods. No recent injury, breathing difficulty, severe bleeding, or loss of consciousness is present. The family has not yet consulted any medical professional.",
+      "immediate_actions": [
+        {
+          "priority": 1,
+          "action": "Arrange a prompt appointment with a primary care physician, orthopaedic specialist, or physiotherapist (or use a telemedicine service) for evaluation of the back pain",
+          "responsible_party": "Coordinator to contact local clinic or telemedicine provider",
+          "time_window": "as soon as reasonably practicable"
+        },
+        {
+          "priority": 2,
+          "action": "Instruct the father to monitor for red‑flag symptoms such as leg weakness, numbness, bowel or bladder incontinence, fever, or severe unrelenting pain and call emergency services (108) if any appear",
+          "responsible_party": "Citizen (father) with coordinator reminder",
+          "time_window": "continuous monitoring"
+        },
+        {
+          "priority": 3,
+          "action": "Recommend use of over‑the‑counter analgesics (acetaminophen or NSAID) following label instructions, ensuring no contraindications",
+          "responsible_party": "Citizen (father)",
+          "time_window": "as needed for pain relief"
+        }
+      ],
+      "resources_needed": [
+        "List of nearby primary care clinics or hospitals",
+        "Telemedicine platform access",
+        "Over‑the‑counter analgesics"
+      ],
+      "authorities_to_notify": [
+        "Local Primary Health Center"
+      ],
+      "situation_brief": "The citizen reports that his father is experiencing persistent lower back pain for three weeks, which worsens with prolonged standing. The primary threat is the potential development of serious spinal pathology, indicated by red‑flag symptoms such as leg weakness, numbness, or bowel/bladder dysfunction. No medical consultation has been sought yet, and the father has not taken any specific actions beyond coping with the discomfort. The coordinator should arrange for a prompt referral to an appropriate medical professional (primary care physician, orthopaedic specialist, or physiotherapist) and provide guidance on monitoring red‑flag signs.",
+      "conflict_resolution": null,
+      "escalation_path": [
+        {
+          "level": 1,
+          "authority": "District Magistrate / Competent Authority",
+          "trigger": "If initial report remains unaddressed",
+          "contact": "Verified contact unavailable"
+        }
+      ],
+      "escalation_required": false,
+      "estimated_resolution_time": "days",
+      "evidence_to_collect": [
+        {
+          "item": "Daily pain diary noting intensity, duration, and activities that worsen pain",
+          "why_important": "Helps the evaluating clinician assess severity and pattern of the condition",
+          "how_to_collect": "Write down pain scores and triggers each day in a notebook or phone app",
+          "time_sensitive": false
+        },
+        {
+          "item": "Record of any occurrence of leg weakness, numbness, or bowel/bladder changes",
+          "why_important": "Red‑flag signs that may indicate serious pathology",
+          "how_to_collect": "Note any such symptoms with date and time as soon as they are observed",
+          "time_sensitive": false
+        },
+        {
+          "item": "Temperature log if fever develops",
+          "why_important": "Fever can signal infection or inflammatory cause",
+          "how_to_collect": "Measure temperature with a thermometer and record readings",
+          "time_sensitive": false
+        },
+        {
+          "item": "List of OTC medications taken and dosage",
+          "why_important": "Ensures safe medication use and informs clinician",
+          "how_to_collect": "Write down each medication, dose, and timing",
+          "time_sensitive": false
+        },
+        {
+          "item": "Copy of any previous medical records related to back or spine",
+          "why_important": "Provides clinician with past diagnostic information",
+          "how_to_collect": "Gather printed or digital copies from prior visits or request from previous provider",
+          "time_sensitive": false
+        }
+      ]
+    },
+    "ui_result": {
+      "nearest_authority_type": "Chief Medical Officer (CMO)",
+      "authority_to_contact": "District Health Department (CMO Office)",
+      "golden_window": {
+        "time_remaining": "None (routine evaluation)",
+        "consequence_of_delay": "Routine medical evaluation recommended without artificial deadline"
+      },
+      "emergency_contacts": [
+        {
+          "name": "National Ambulance",
+          "number": "108",
+          "when_to_call": "If severe back pain is accompanied by leg weakness, numbness, loss of bladder/bowel control, sudden severe pain, or any other emergency sign"
+        },
+        {
+          "name": "Police",
+          "number": "100",
+          "when_to_call": "If the situation escalates to a safety or criminal concern"
+        }
+      ],
+      "authorities_to_notify": [
+        "Local Primary Health Center"
+      ],
+      "immediate_actions": [
+        {
+          "priority": 1,
+          "action": "Arrange a prompt appointment with a primary care physician, orthopaedic specialist, or physiotherapist (or use a telemedicine service) for evaluation of the back pain",
+          "responsible_party": "Coordinator to contact local clinic or telemedicine provider",
+          "time_window": "as soon as reasonably practicable"
+        },
+        {
+          "priority": 2,
+          "action": "Instruct the father to monitor for red‑flag symptoms such as leg weakness, numbness, bowel or bladder incontinence, fever, or severe unrelenting pain and call emergency services (108) if any appear",
+          "responsible_party": "Citizen (father) with coordinator reminder",
+          "time_window": "continuous monitoring"
+        },
+        {
+          "priority": 3,
+          "action": "Recommend use of over‑the‑counter analgesics (acetaminophen or NSAID) following label instructions, ensuring no contraindications",
+          "responsible_party": "Citizen (father)",
+          "time_window": "as needed for pain relief"
+        }
+      ]
+    }
+  },
+  "case2": {
+    "title": "CASE 2: EARACHE AND DIZZINESS",
+    "raw_text": "My sister has had mild persistent ear pain and dizziness for 4 days after a cold. No fever, no discharge, no confusion, no sudden hearing loss. We haven't seen a doctor yet. Who should we consult and what precautions should we take?",
+    "domain": "health",
+    "severity_label": "low",
+    "severity_score": 0.2,
+    "situation_brief": "The sister is suffering mild ear pain and dizziness for four days after a cold. The most urgent threat is the potential development of a middle‑ear infection or worsening symptoms if red‑flag signs appear. No medical consultation has been sought yet and no self‑treatment has been performed. The coordinator should facilitate arranging a prompt primary‑care or ENT appointment and provide clear guidance on monitoring and ear‑care precautions.",
+    "triage": {
+      "triage_severity": "minor",
+      "primary_concern": "Age not specified year old patient presenting with mild ear pain and dizziness for 4 days duration. Mechanism: post-viral upper respiratory infection. Current status: conscious, stable. Key concerns:\\n- Persistent ear pain\\n- Dizziness\\n- Potential middle ear infection\\n- Need for ENT evaluation",
+      "interventions": [
+        "Consult healthcare professional: to assess for possible otitis media or eustachian tube dysfunction — delayed diagnosis may lead to worsening infection or hearing loss — schedule an appointment with a primary care physician or ENT specialist; if unable to obtain an appointment promptly, visit the nearest clinic or hospital outpatient department for evaluation",
+        "Monitor for red-flag symptoms: watch for fever, worsening pain, sudden hearing loss, ear discharge, or vomiting — missing red flags may allow progression to acute infection or complications — keep a daily symptom log and seek immediate medical care if any of these signs develop",
+        "Keep ear dry and avoid self‑cleaning: to prevent secondary infection or irritation — water or objects in the ear can cause otitis externa or trauma — use a cotton ball coated with petroleum jelly while showering and refrain from inserting objects into the ear canal"
+      ],
+      "golden_window": {
+        "time_remaining": "None (routine evaluation)",
+        "consequence_of_delay": "Routine medical evaluation recommended without artificial deadline"
+      },
+      "emergency_contacts": [
+        {
+          "name": "National Ambulance",
+          "number": "108",
+          "when_to_call": "if severe ear pain, high fever, sudden hearing loss, vomiting, or worsening dizziness occurs"
+        }
+      ],
+      "required_facility": "clinic",
+      "response_time": "non_urgent",
+      "hospital_denial_detected": false,
+      "confidence": 0.93,
+      "escalate_to_rights_agent": false
+    },
+    "coordination": {
+      "situation_title": "Mild ear pain and dizziness post‑cold in adult sibling",
+      "overall_severity": "low",
+      "overall_severity_score": 0.2,
+      "what_is_happening": "The user reports that their sister is experiencing mild ear pain and dizziness that have persisted for four days following a recent cold. She has no fever, ear discharge, or hearing loss and remains otherwise stable.",
+      "immediate_actions": [
+        {
+          "priority": 1,
+          "action": "Schedule an appointment with a primary care physician or ENT specialist for evaluation",
+          "responsible_party": "Citizen (sister or family)",
+          "time_window": "as soon as reasonably practicable"
+        },
+        {
+          "priority": 2,
+          "action": "Monitor for red‑flag symptoms (fever, worsening pain, hearing loss, discharge, vomiting) and seek immediate care if any appear",
+          "responsible_party": "Citizen",
+          "time_window": "ongoing, watch daily"
+        },
+        {
+          "priority": 3,
+          "action": "Keep the ear dry; use a cotton ball with petroleum jelly while showering and avoid inserting objects",
+          "responsible_party": "Citizen",
+          "time_window": "as soon as practicable"
+        },
+        {
+          "priority": 4,
+          "action": "Maintain a daily symptom log noting pain level, dizziness, temperature, and any new signs",
+          "responsible_party": "Citizen",
+          "time_window": "daily"
+        },
+        {
+          "priority": 5,
+          "action": "Identify the nearest clinic or primary health centre and note its contact details for quick access",
+          "responsible_party": "Citizen",
+          "time_window": "as soon as practicable"
+        }
+      ],
+      "resources_needed": [
+        "List of nearby primary care clinics",
+        "ENT specialist contact information",
+        "Ear‑care supplies (cotton ball, petroleum jelly)"
+      ],
+      "authorities_to_notify": [
+        "Local Primary Health Center",
+        "ENT Specialist Clinic"
+      ],
+      "situation_brief": "The sister is suffering mild ear pain and dizziness for four days after a cold. The most urgent threat is the potential development of a middle‑ear infection or worsening symptoms if red‑flag signs appear. No medical consultation has been sought yet and no self‑treatment has been performed. The coordinator should facilitate arranging a prompt primary‑care or ENT appointment and provide clear guidance on monitoring and ear‑care precautions.",
+      "conflict_resolution": null,
+      "escalation_path": [
+        {
+          "level": 1,
+          "authority": "District Magistrate / Competent Authority",
+          "trigger": "If initial report remains unaddressed",
+          "contact": "Verified contact unavailable"
+        }
+      ],
+      "escalation_required": false,
+      "estimated_resolution_time": "days",
+      "evidence_to_collect": [
+        {
+          "item": "Daily symptom log entries",
+          "why_important": "Document progression and support medical assessment",
+          "how_to_collect": "Write down pain level, dizziness, any fever, date and time each day",
+          "time_sensitive": false
+        },
+        {
+          "item": "Temperature readings",
+          "why_important": "Fever would be a red‑flag",
+          "how_to_collect": "Measure body temperature each morning with a thermometer and record",
+          "time_sensitive": false
+        },
+        {
+          "item": "Photograph of external ear (if any visible swelling or discharge) taken from a safe distance",
+          "why_important": "Provides visual evidence for clinician",
+          "how_to_collect": "Use phone camera to take clear photo of ear while standing at a comfortable distance, avoid touching ear",
+          "time_sensitive": false
+        },
+        {
+          "item": "Record of any medication or ear drops used",
+          "why_important": "Helps clinician avoid interactions",
+          "how_to_collect": "Write down name, dosage, frequency of any over‑the‑counter products used",
+          "time_sensitive": false
+        },
+        {
+          "item": "Copy of appointment confirmation or referral note",
+          "why_important": "Ensures follow‑up and accountability",
+          "how_to_collect": "Save email or printed appointment slip",
+          "time_sensitive": false
+        }
+      ]
+    },
+    "ui_result": {
+      "nearest_authority_type": "Chief Medical Officer (CMO)",
+      "authority_to_contact": "District Health Department (CMO Office)",
+      "golden_window": {
+        "time_remaining": "None (routine evaluation)",
+        "consequence_of_delay": "Routine medical evaluation recommended without artificial deadline"
+      },
+      "emergency_contacts": [
+        {
+          "name": "National Ambulance",
+          "number": "108",
+          "when_to_call": "if severe ear pain, high fever, sudden hearing loss, vomiting, or worsening dizziness occurs"
+        }
+      ],
+      "authorities_to_notify": [
+        "Local Primary Health Center",
+        "ENT Specialist Clinic"
+      ],
+      "immediate_actions": [
+        {
+          "priority": 1,
+          "action": "Schedule an appointment with a primary care physician or ENT specialist for evaluation",
+          "responsible_party": "Citizen (sister or family)",
+          "time_window": "as soon as reasonably practicable"
+        },
+        {
+          "priority": 2,
+          "action": "Monitor for red‑flag symptoms (fever, worsening pain, hearing loss, discharge, vomiting) and seek immediate care if any appear",
+          "responsible_party": "Citizen",
+          "time_window": "ongoing, watch daily"
+        },
+        {
+          "priority": 3,
+          "action": "Keep the ear dry; use a cotton ball with petroleum jelly while showering and avoid inserting objects",
+          "responsible_party": "Citizen",
+          "time_window": "as soon as practicable"
+        },
+        {
+          "priority": 4,
+          "action": "Maintain a daily symptom log noting pain level, dizziness, temperature, and any new signs",
+          "responsible_party": "Citizen",
+          "time_window": "daily"
+        },
+        {
+          "priority": 5,
+          "action": "Identify the nearest clinic or primary health centre and note its contact details for quick access",
+          "responsible_party": "Citizen",
+          "time_window": "as soon as practicable"
+        }
+      ]
+    }
+  }
+}

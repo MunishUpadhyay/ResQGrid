@@ -69,48 +69,6 @@ def mock_groq(monkeypatch):
                     "escalate": True,
                     "reasoning": "Test sentinel reasoning"
                 })
-        elif "rights" in system_prompt:
-            response_content = json.dumps({
-                "rights_violated": ["Right to Life"],
-                "severity": "high",
-                "legal_provisions": [
-                    {
-                        "provision": "Article 21",
-                        "description": "Protection of life and personal liberty",
-                        "relevance": "Directly violated"
-                    }
-                ],
-                "immediate_actions": ["File a complaint"],
-                "authority_to_contact": "DLSA",
-                "case_strength": 0.8,
-                "nearest_authority_type": "DLSA",
-                "legal_timeline": [
-                    {
-                        "step": 1,
-                        "action": "File FIR",
-                        "timeframe": "Within 24 hours",
-                        "why_urgent": "To preserve evidence"
-                    }
-                ]
-            })
-        elif "triage" in system_prompt:
-            response_content = json.dumps({
-                "triage_severity": "immediate",
-                "primary_concern": "Urgent hospitalization needed",
-                "interventions": ["Administer oxygen"],
-                "required_facility": "general_hospital",
-                "response_time": "urgent",
-                "hospital_denial_detected": True,
-                "confidence": 0.9,
-                "escalate_to_rights_agent": True,
-                "golden_window": {
-                    "time_remaining": "1 hour",
-                    "consequence_of_delay": "Severe risk"
-                },
-                "emergency_contacts": [
-                    {"name": "Ambulance", "number": "108", "when_to_call": "Now"}
-                ]
-            })
         elif "coordination" in system_prompt:
             response_content = json.dumps({
                 "situation_title": "Emergency Situation Title",
@@ -149,6 +107,30 @@ def mock_groq(monkeypatch):
                         "why_important": "Proof of denial",
                         "how_to_collect": "Use phone",
                         "time_sensitive": True
+                    }
+                ]
+            })
+        elif "rights" in system_prompt:
+            response_content = json.dumps({
+                "rights_violated": ["Right to Life"],
+                "severity": "high",
+                "legal_provisions": [
+                    {
+                        "provision": "Article 21",
+                        "description": "Protection of life and personal liberty",
+                        "relevance": "Directly violated"
+                    }
+                ],
+                "immediate_actions": ["File a complaint"],
+                "authority_to_contact": "DLSA",
+                "case_strength": 0.8,
+                "nearest_authority_type": "DLSA",
+                "legal_timeline": [
+                    {
+                        "step": 1,
+                        "action": "File FIR",
+                        "timeframe": "Within 24 hours",
+                        "why_urgent": "To preserve evidence"
                     }
                 ]
             })
