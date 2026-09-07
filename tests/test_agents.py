@@ -885,5 +885,225 @@ def test_existing_contact_sanitization():
     assert "Verified contact unavailable" in sanitize_text_contacts("Call 01234-567890 immediately")
 
 
+# ---------------------------------------------------------------------------
+# Compact Verified Legal Context Tests (Fix #3)
+# ---------------------------------------------------------------------------
+
+def test_coordination_context_includes_verified_legal_provision_identifiers(monkeypatch):
+    from apps.agents.agents import CoordinationAgent
+    
+    coord_agent = CoordinationAgent()
+    captured_messages = []
+    
+    def dummy_call_groq(prompt_msg, response_schema=None):
+        captured_messages.append(prompt_msg)
+        return json.dumps({
+            "situation_title": "Test Brief",
+            "overall_severity": "high",
+            "overall_severity_score": 0.75,
+            "what_is_happening": "Test incident details.",
+            "immediate_actions": [{"priority": 1, "action": "Test action", "responsible_party": "Police", "time_window": "promptly"}],
+            "resources_needed": [],
+            "authorities_to_notify": ["Police"],
+            "situation_brief": "Sentence 1. Sentence 2. Sentence 3. Sentence 4.",
+            "escalation_required": False,
+            "estimated_resolution_time": "hours"
+        })
+        
+    monkeypatch.setattr(coord_agent, "call_groq", dummy_call_groq)
+    
+    mock_signal = MagicMock()
+    mock_signal.raw_text = "Police unlawful arrest without warrant."
+    mock_signal.domain = "legal"
+    
+    sentinel_res = {"domain": "legal", "requires_immediate_action": True}
+    agent_outputs = {
+        "rights": {
+            "rights_violated": ["Section 57 CrPC (now Section 58 BNSS)", "Article 22"],
+            "severity": "high",
+            "immediate_actions": ["Request bail"],
+            "authority_to_contact": "DLSA",
+            "legal_provisions": [
+                {
+                    "provision": "Section 58 BNSS",
+                    "code": "BNSS",
+                    "section": "58",
+                    "description": "DO_NOT_INCLUDE_LONG_STATUTORY_DESCRIPTION_TEXT",
+                    "relevance": "DO_NOT_INCLUDE_RELEVANCE_TEXT",
+                    "verified": True
+                },
+                {
+                    "provision": "Article 22",
+                    "code": "Constitution",
+                    "section": "Article 22",
+                    "description": "DO_NOT_INCLUDE_ARTICLE_DESCRIPTION",
+                    "verified": True
+                }
+            ]
+        }
+    }
+    
+    result = coord_agent.run(mock_signal, sentinel_res, agent_outputs)
+    assert result["situation_title"] == "Test Brief"
+    assert len(captured_messages) == 1
+    
+    user_msg = captured_messages[0]
+    # 1. Compact verified provision identifiers ARE included
+    assert "Verified legal provisions: ['Section 58 BNSS', 'Article 22']" in user_msg
+    # 2. Full statutory descriptions and relevance text ARE NOT included
+    assert "DO_NOT_INCLUDE_LONG_STATUTORY_DESCRIPTION_TEXT" not in user_msg
+    assert "DO_NOT_INCLUDE_RELEVANCE_TEXT" not in user_msg
+
+
+def test_coordination_context_excludes_unverified_legal_provisions(monkeypatch):
+    from apps.agents.agents import CoordinationAgent
+    
+    coord_agent = CoordinationAgent()
+    captured_messages = []
+    
+    def dummy_call_groq(prompt_msg, response_schema=None):
+        captured_messages.append(prompt_msg)
+        return json.dumps({
+            "situation_title": "Test Brief",
+            "overall_severity": "medium",
+            "overall_severity_score": 0.5,
+            "what_is_happening": "Details.",
+            "immediate_actions": [],
+            "resources_needed": [],
+            "authorities_to_notify": ["DLSA"],
+            "situation_brief": "S1. S2. S3. S4.",
+            "escalation_required": False,
+            "estimated_resolution_time": "hours"
+        })
+        
+    monkeypatch.setattr(coord_agent, "call_groq", dummy_call_groq)
+    
+    mock_signal = MagicMock()
+    mock_signal.raw_text = "Legal dispute."
+    
+    sentinel_res = {"domain": "legal", "requires_immediate_action": False}
+    agent_outputs = {
+        "rights": {
+            "rights_violated": ["Some Act"],
+            "severity": "medium",
+            "immediate_actions": [],
+            "authority_to_contact": "DLSA",
+            "legal_provisions": [
+                {
+                    "provision": "Verified Section 10",
+                    "verified": True
+                },
+                {
+                    "provision": "Unverified Fake Section 999",
+                    "verified": False
+                }
+            ]
+        }
+    }
+    
+    coord_agent.run(mock_signal, sentinel_res, agent_outputs)
+    user_msg = captured_messages[0]
+    
+    # 3. Unverified provision is NOT presented as verified context
+    assert "Verified Section 10" in user_msg
+    assert "Unverified Fake Section 999" not in user_msg
+
+
+def test_coordination_context_no_verified_provisions_produces_no_fabricated_context(monkeypatch):
+    from apps.agents.agents import CoordinationAgent
+    
+    coord_agent = CoordinationAgent()
+    captured_messages = []
+    
+    def dummy_call_groq(prompt_msg, response_schema=None):
+        captured_messages.append(prompt_msg)
+        return json.dumps({
+            "situation_title": "Test Brief",
+            "overall_severity": "low",
+            "overall_severity_score": 0.2,
+            "what_is_happening": "Civic hazard.",
+            "immediate_actions": [],
+            "resources_needed": [],
+            "authorities_to_notify": ["Municipal Corporation"],
+            "situation_brief": "S1. S2. S3. S4.",
+            "escalation_required": False,
+            "estimated_resolution_time": "days"
+        })
+        
+    monkeypatch.setattr(coord_agent, "call_groq", dummy_call_groq)
+    
+    mock_signal = MagicMock()
+    mock_signal.raw_text = "Pothole on street."
+    
+    sentinel_res = {"domain": "civic", "requires_immediate_action": False}
+    agent_outputs = {
+        "rights": {
+            "rights_violated": [],
+            "severity": "low",
+            "immediate_actions": [],
+            "authority_to_contact": "Local Municipal Authority",
+            "legal_provisions": []
+        }
+    }
+    
+    coord_agent.run(mock_signal, sentinel_res, agent_outputs)
+    user_msg = captured_messages[0]
+    
+    # 4. No verified provisions produces no fabricated context
+    assert "Verified legal provisions" not in user_msg
+
+
+def test_coordination_context_medical_remains_unchanged(monkeypatch):
+    from apps.agents.agents import CoordinationAgent
+    
+    coord_agent = CoordinationAgent()
+    captured_messages = []
+    
+    def dummy_call_groq(prompt_msg, response_schema=None):
+        captured_messages.append(prompt_msg)
+        return json.dumps({
+            "situation_title": "Medical Brief",
+            "overall_severity": "critical",
+            "overall_severity_score": 0.95,
+            "what_is_happening": "Medical emergency.",
+            "immediate_actions": [{"priority": 1, "action": "Call Ambulance", "responsible_party": "Paramedics", "time_window": "immediate"}],
+            "resources_needed": ["Ambulance"],
+            "authorities_to_notify": ["CMO"],
+            "situation_brief": "S1. S2. S3. S4.",
+            "escalation_required": True,
+            "estimated_resolution_time": "immediate"
+        })
+        
+    monkeypatch.setattr(coord_agent, "call_groq", dummy_call_groq)
+    
+    mock_signal = MagicMock()
+    mock_signal.raw_text = "Severe burn patient."
+    
+    sentinel_res = {"domain": "health", "requires_immediate_action": True}
+    agent_outputs = {
+        "triage": {
+            "triage_severity": "immediate",
+            "primary_concern": "Burn handoff note",
+            "interventions": ["Apply cool running water"],
+            "required_facility": "trauma_center",
+            "response_time": "immediate",
+            "hospital_denial_detected": False
+        }
+    }
+    
+    coord_agent.run(mock_signal, sentinel_res, agent_outputs)
+    user_msg = captured_messages[0]
+    
+    # 5. Medical Coordination context remains unchanged
+    assert "Medical assessment:" in user_msg
+    assert "Triage severity: immediate" in user_msg
+    assert "Primary concern: Burn handoff note" in user_msg
+    assert "Interventions needed: ['Apply cool running water']" in user_msg
+    assert "Required facility: trauma_center" in user_msg
+    assert "Response time: immediate" in user_msg
+    assert "Hospital denial: False" in user_msg
+
+
+
 
 

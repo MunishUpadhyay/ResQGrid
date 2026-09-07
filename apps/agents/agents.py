@@ -749,13 +749,37 @@ class CoordinationAgent(BaseAgent):
 
         if 'rights' in agent_outputs:
             r = agent_outputs['rights']
-            context_parts.append(
-                f"Legal assessment:\n"
-                f"  Rights violated: {r.get('rights_violated', [])}\n"
-                f"  Severity: {r.get('severity')}\n"
-                f"  Immediate actions: {r.get('immediate_actions', [])}\n"
+            legal_lines = [
+                "Legal assessment:",
+                f"  Rights violated: {r.get('rights_violated', [])}"
+            ]
+
+            # Extract compact verified provision identifiers
+            verified_provs = []
+            for item in r.get("legal_provisions", []):
+                if isinstance(item, dict):
+                    is_ver = item.get("verified")
+                    if is_ver is True or is_ver in ("True", "true"):
+                        prov_name = item.get("provision")
+                        if not prov_name:
+                            code = item.get("code", "")
+                            sec = item.get("section", "")
+                            if code and sec:
+                                prov_name = f"{code} Section {sec}"
+                            elif code or sec:
+                                prov_name = f"{code}{sec}".strip()
+                        if prov_name and prov_name not in verified_provs:
+                            verified_provs.append(prov_name)
+
+            if verified_provs:
+                legal_lines.append(f"  Verified legal provisions: {verified_provs}")
+
+            legal_lines.extend([
+                f"  Severity: {r.get('severity')}",
+                f"  Immediate actions: {r.get('immediate_actions', [])}",
                 f"  Authority: {r.get('authority_to_contact')}"
-            )
+            ])
+            context_parts.append("\n".join(legal_lines))
 
         if 'triage' in agent_outputs:
             t = agent_outputs['triage']
