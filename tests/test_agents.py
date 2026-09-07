@@ -729,3 +729,76 @@ def test_medical_protocol_registry_lookup():
     assert res_lower["act"] == "START Protocol"
 
 
+def test_sentinel_agent_severity_contract():
+    agent = SentinelAgent()
+    mock_signal = MagicMock()
+    mock_signal.raw_text = "There is a deep unlit trench on the main highway posing a severe risk to vehicles."
+    mock_signal.source_type = "text"
+
+    raw_json = {
+        "domain": "civic",
+        "severity_score": 0.7,
+        "severity_label": "high",
+        "confidence": 0.9,
+        "keywords": ["trench", "highway", "hazard"],
+        "reasoning": "Deep unlit trench on high-speed road poses major physical accident risk.",
+        "requires_immediate_action": False
+    }
+
+    agent.call_groq = lambda *args, **kwargs: json.dumps(raw_json)
+    result = agent.run(mock_signal)
+
+    assert "severity_score" in result
+    assert result["severity_score"] == 0.7
+    assert "severity_label" in result
+    assert result["severity_label"] == "high"
+    assert result["domain"] == "civic"
+
+
+@pytest.mark.django_db
+def test_civic_report_severity_pipeline_aggregation(monkeypatch):
+    from pipeline.tasks import route_to_agents, coordination_agent
+    from apps.signals.models import SourceType
+
+    tenant = Tenant.objects.create(name="Civic Test Tenant", is_active=True)
+    signal = Signal.objects.create(tenant=tenant, raw_text="Deep unlit trench on main road", source_type=SourceType.TEXT)
+
+    actual_task = route_to_agents._get_current_object()
+    mock_request = MagicMock()
+    mock_request.retries = 0
+    monkeypatch.setattr(type(actual_task), "request", property(lambda self: mock_request))
+
+    # Mock coordination_agent.delay to prevent triggering downstream WebSocket task in unit test
+    monkeypatch.setattr("pipeline.tasks.coordination_agent.delay", lambda *args, **kwargs: None)
+
+    # 1. Medium/High risk civic report -> should obtain severity from Sentinel (0.7 / high), NOT 0.0 / low
+    sentinel_high = {
+        "domain": "civic",
+        "severity_score": 0.7,
+        "severity_label": "high",
+        "requires_immediate_action": False,
+        "reasoning": "Deep unlit trench on high-speed road"
+    }
+
+    route_to_agents.run(str(signal.id), sentinel_high)
+    signal.refresh_from_db()
+    incident = signal.incident
+    assert incident.severity_score == 0.75  # 0.75 from SEVERITY_MAP["high"]
+    assert incident.severity_label == "high"
+
+    # 2. Genuinely low risk civic report -> should remain low
+    sentinel_low = {
+        "domain": "civic",
+        "severity_score": 0.15,
+        "severity_label": "low",
+        "requires_immediate_action": False,
+        "reasoning": "Minor aesthetic scuff on park bench"
+    }
+
+    route_to_agents.run(str(signal.id), sentinel_low)
+    incident.refresh_from_db()
+    assert incident.severity_score == 0.25  # 0.25 from SEVERITY_MAP["low"]
+    assert incident.severity_label == "low"
+
+
+

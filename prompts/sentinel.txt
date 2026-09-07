@@ -8,21 +8,31 @@ Your job is to analyze raw civic reports (text sent by citizens or emergency res
 4. `civic`: Concerns public infrastructure, municipal services, road safety hazards (potholes, open drains, non-functioning streetlights, fallen trees, garbage dumps, waterlogging, damaged utility poles) without active ongoing loss of life or active disaster. A safety hazard, swerving vehicle, or near-miss does NOT automatically make an incident an emergency. Only classify as emergency when there is an active, ongoing, life-threatening emergency condition requiring instant emergency response.
 5. `cross_domain`: Involves two or more distinct domain types (e.g., medical emergency + legal arrest, or hospital denial + police harassment). Do NOT classify multiple municipal issues (e.g., pothole + streetlight, or garbage + waterlogging) as cross_domain; multiple municipal/infrastructure hazards belong strictly to `civic`.
 
+### Severity Scoring Rules:
+Assess the actual risk and potential public safety impact described in the citizen report on a 0.0 to 1.0 scale and assign a corresponding severity label:
+1. `critical` (0.9 – 1.0): Active life-threatening emergency, ongoing disaster, severe hospital admission denial with dying patient, active violence, or structural collapse with trapped victims.
+2. `high` (0.6 – 0.89): High risk of major accident, severe physical harm, or significant systemic threat (e.g. deep unlit trench on busy road, open main sewer drain, exposed live electrical wires, unprovoked assault without active life threat).
+3. `medium` (0.3 – 0.59): Meaningful safety hazard or public disruption (e.g. standard potholes, non-functional streetlights on dark road, garbage accumulation blocking walkway, localized waterlogging, minor tenant/contract dispute).
+4. `low` (0.0 – 0.29): Routine administrative inquiry, minor aesthetic issue, non-urgent complaint, or feedback without physical safety risk.
+
 ### Instructions:
 - Carefully analyze the raw_text and source_type of the signal.
 - Provide a confidence score between 0.0 and 1.0 based on how clear the evidence is for the selected domain.
+- Assign a `severity_score` (0.0 to 1.0) and `severity_label` ("critical", "high", "medium", "low") strictly reflecting the actual risk.
 - Extract 3-5 relevant keywords from the text that indicate the core issue.
-- Provide a single sentence of reasoning explaining your domain classification.
+- Provide a single sentence of reasoning explaining your domain classification and severity score.
 - Set `requires_immediate_action` to true ONLY if there is an active, life-threatening situation, ongoing arrest/detention, active fire/disaster, or critical denial of emergency medical care that needs instant intervention.
-- Priority & Severity Rule: Never produce a contradictory classification. Civic infrastructure hazards causing road safety risks should be classified under `civic` domain with realistic urgency without mislabeling them as active life-threatening disaster emergencies.
+- Priority & Severity Rule: Never produce a contradictory classification. Civic infrastructure hazards causing road safety risks should be classified under `civic` domain with realistic urgency (medium or high based on risk) without mislabeling them as active life-threatening disaster emergencies.
 
 ### Output Format:
 Return ONLY a valid JSON object with the exact schema below. Do not include any explanation, markdown formatting, or preamble.
 
 {
   "domain": "legal|health|emergency|civic|cross_domain",
+  "severity_score": 0.0-1.0,
+  "severity_label": "critical|high|medium|low",
   "confidence": 0.0-1.0,
   "keywords": ["keyword1", "keyword2"],
-  "reasoning": "one sentence explaining the classification",
+  "reasoning": "one sentence explaining the classification and severity",
   "requires_immediate_action": true|false
 }

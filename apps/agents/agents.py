@@ -31,6 +31,16 @@ logger = logging.getLogger(__name__)
 # Pydantic Schemas for Structured Outputs
 # ---------------------------------------------------------------------------
 
+class SentinelSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    domain: Literal["legal", "health", "emergency", "civic", "cross_domain"]
+    severity_score: float = Field(description="Severity score between 0.0 and 1.0 based on actual risk described in the report")
+    severity_label: Literal["critical", "high", "medium", "low"] = Field(description="Severity label: critical (>=0.9), high (>=0.6), medium (>=0.3), low (<0.3)")
+    confidence: float = Field(description="Domain classification confidence score between 0.0 and 1.0")
+    keywords: List[str] = Field(description="List of 3-5 keywords indicating core issue")
+    reasoning: str = Field(description="Single sentence explaining domain classification and severity score")
+    requires_immediate_action: bool = Field(description="True ONLY if there is an active life-threatening crisis or ongoing emergency requiring instant intervention")
+
 class GoldenWindowSchema(BaseModel):
     model_config = ConfigDict(extra="forbid")
     time_remaining: str = Field(description="Time critical limit, e.g. '90 minutes', 'immediate'")
@@ -157,7 +167,7 @@ class SentinelAgent(BaseAgent):
         logger.info("[SentinelAgent] Running domain classification on signal %s", getattr(signal, 'id', 'mock_id'))
         
         user_message = f"Classify this signal:\n\nText: {signal.raw_text}\nSource: {signal.source_type}"
-        raw_response = self.call_groq(user_message)
+        raw_response = self.call_groq(user_message, response_schema=SentinelSchema)
         result = self.parse_json_response(raw_response)
         
         valid_domains = {"legal", "health", "emergency", "civic", "cross_domain"}
@@ -179,8 +189,45 @@ class SentinelAgent(BaseAgent):
                 domain = "civic"
 
         if domain not in valid_domains:
-            raise ValueError(f"Invalid domain returned: {domain}. Expected one of {valid_domains}")
-            
+            if not domain:
+                domain = "cross_domain"
+            elif "|" in domain or "and" in domain or "cross" in domain:
+                domain = "cross_domain"
+            elif "medical" in domain or "hospital" in domain:
+                domain = "health"
+            else:
+                domain = "cross_domain"
+            result["domain"] = domain
+
+        # Ensure severity_score is present, float, and clamped in [0.0, 1.0]
+        if "severity_score" not in result or result["severity_score"] is None:
+            if result.get("requires_immediate_action"):
+                result["severity_score"] = 0.75
+            else:
+                result["severity_score"] = 0.35
+        else:
+            try:
+                result["severity_score"] = max(0.0, min(1.0, float(result["severity_score"])))
+            except (ValueError, TypeError):
+                result["severity_score"] = 0.75 if result.get("requires_immediate_action") else 0.35
+
+        # Align severity_label with severity_score thresholds if missing or invalid
+        valid_labels = {"critical", "high", "medium", "low"}
+        sev_label = str(result.get("severity_label", "")).lower()
+        score = result["severity_score"]
+
+        if sev_label not in valid_labels:
+            if score >= 0.9:
+                result["severity_label"] = "critical"
+            elif score >= 0.6:
+                result["severity_label"] = "high"
+            elif score >= 0.3:
+                result["severity_label"] = "medium"
+            else:
+                result["severity_label"] = "low"
+        else:
+            result["severity_label"] = sev_label
+
         return result
 
 

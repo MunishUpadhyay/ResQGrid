@@ -13,19 +13,16 @@ class IncidentsConfig(AppConfig):
 
         from apps.agents.agents import SentinelAgent
 
+        original_sentinel_run = SentinelAgent.run
+
         def custom_sentinel_run(self, signal) -> dict:
             logger.info(
                 "[SentinelAgent Monkeypatch] Running domain classification on signal %s",
                 getattr(signal, 'id', 'mock_id')
             )
-            user_message = (
-                f"Classify this signal:\n\nText: {signal.raw_text}\n"
-                f"Source: {signal.source_type}"
-            )
-            raw_response = self.call_groq(user_message)
-            result = self.parse_json_response(raw_response)
+            result = original_sentinel_run(self, signal)
 
-            valid_domains = {"legal", "health", "emergency", "cross_domain"}
+            valid_domains = {"legal", "health", "emergency", "civic", "cross_domain"}
             domain = result.get("domain")
             if domain not in valid_domains:
                 logger.warning(
