@@ -12,7 +12,6 @@ django-cors-headers==4.4.0
 # ---- Geospatial ----
 # Requires GDAL, GEOS, and PostGIS to be installed on the host
 django-environ==0.11.2
-GDAL==3.6.2
 
 # ---- Channels / WebSocket ----
 channels==4.1.0
