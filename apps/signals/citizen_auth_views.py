@@ -131,16 +131,13 @@ def citizen_password_reset_request(request):
                     f"-- Prahari System / प्रहरी टीम"
                 )
                 try:
-                    send_mail(
-                        subject,
-                        message,
-                        getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@prahari.org"),
-                        [user.email or email],
-                        fail_silently=True,
-                    )
-                    logger.info("[PasswordReset] Dispatching reset email for citizen: %s", email)
+                    from apps.signals.tasks import send_password_reset_email
+                    target_addr = user.email or email
+                    send_password_reset_email.delay(subject, message, target_addr)
+                    logger.info("[PasswordReset] Enqueued reset email task for citizen: %s", email)
                 except Exception as e:
-                    logger.error("[PasswordReset] Email dispatch failed for %s: %s", email, e)
+                    logger.error("[PasswordReset] Email task enqueue failed for %s: %s", email, e)
+
 
         # Always redirect to done page to prevent email enumeration attack
         return redirect("citizen_password_reset_done")

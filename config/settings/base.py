@@ -1,36 +1,19 @@
-"""
-Base settings for Prahari.
-All environment-specific settings inherit from this module.
-"""
-
 import os
+import sys
 from pathlib import Path
 from datetime import timedelta
-import dj_database_url
 import environ
+import dj_database_url
 
 env = environ.Env()
-os.environ["ANONYMIZED_TELEMETRY"] = "False"
 
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent.parent.parent  # project root
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# ---------------------------------------------------------------------------
-# Security
-# ---------------------------------------------------------------------------
 SECRET_KEY = os.environ.get("SECRET_KEY", "changeme-in-env")
-
 DEBUG = False
-
 SITE_URL = env('SITE_URL', default='')
-
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 
-# ---------------------------------------------------------------------------
-# Application definition
-# ---------------------------------------------------------------------------
 DJANGO_APPS = [
     "daphne",
     "django.contrib.admin",
@@ -39,7 +22,7 @@ DJANGO_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django.contrib.gis",  # PostGIS support
+    "django.contrib.gis",
 ]
 
 THIRD_PARTY_APPS = [
@@ -62,7 +45,7 @@ LOCAL_APPS = [
     "apps.notifications",
 ]
 
-INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+INSTALLED_APPS  = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -98,9 +81,6 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-# ---------------------------------------------------------------------------
-# Database — PostGIS backend
-# ---------------------------------------------------------------------------
 DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgis://prahari:prahari@localhost:5432/prahari"
 )
@@ -108,9 +88,6 @@ DATABASES = {
     "default": dj_database_url.parse(DATABASE_URL)
 }
 
-# ---------------------------------------------------------------------------
-# Redis / Channel Layer
-# ---------------------------------------------------------------------------
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 CHANNEL_LAYERS = {
@@ -122,9 +99,6 @@ CHANNEL_LAYERS = {
     },
 }
 
-# ---------------------------------------------------------------------------
-# Cache
-# ---------------------------------------------------------------------------
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
@@ -132,10 +106,6 @@ CACHES = {
     }
 }
 
-
-# ---------------------------------------------------------------------------
-# Celery
-# ---------------------------------------------------------------------------
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_ACCEPT_CONTENT = ["json"]
@@ -144,9 +114,6 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
-# ---------------------------------------------------------------------------
-# REST Framework
-# ---------------------------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -157,14 +124,11 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-# ---------------------------------------------------------------------------
-# Simple JWT
-# ---------------------------------------------------------------------------
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
@@ -175,15 +139,9 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-# ---------------------------------------------------------------------------
-# Groq settings
-# ---------------------------------------------------------------------------
 GROQ_API_KEY = env('GROQ_API_KEY', default='')
-GROQ_API_KEY_2 = env('GROQ_API_KEY_2', default='')  # Second key for rate-limit rotation
+GROQ_API_KEY_2 = env('GROQ_API_KEY_2', default='')
 
-# ---------------------------------------------------------------------------
-# Password validation
-# ---------------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -191,43 +149,28 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# ---------------------------------------------------------------------------
-# Internationalisation
-# ---------------------------------------------------------------------------
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-# ---------------------------------------------------------------------------
-# Static files
-# ---------------------------------------------------------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-# ---------------------------------------------------------------------------
-# Default primary key
-# ---------------------------------------------------------------------------
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+DEFULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ---------------------------------------------------------------------------
-# CORS (configure per-environment)
-# ---------------------------------------------------------------------------
 CORS_ALLOW_ALL_ORIGINS = False
 
-# ---------------------------------------------------------------------------
-# Citizen API Settings
-# ---------------------------------------------------------------------------
 CITIZEN_API_KEY = env("CITIZEN_API_KEY", default="prahari_citizen_key_2026")
 
-# ---------------------------------------------------------------------------
-# RAG Relevance Thresholds & Mode (L2 Distance limits & zero-memory flag)
-# ---------------------------------------------------------------------------
-RAG_LEGAL_DISTANCE_THRESHOLD = 1.45
-RAG_MEDICAL_DISTANCE_THRESHOLD = 1.45
-USE_ZERO_MEMORY_RAG = env.bool("USE_ZERO_MEMORY_RAG", default=True)
-
-
+# ------------------------------------------------------------------------
+# Brevo HTTPS API Email Configuration
+# ------------------------------------------------------------------------
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+BREVO_API_KEY = env("BREVO_API_KEY", default="")
+BREVO_SENDER_EMAIL = env("BREVO_SENDER_EMAIL", default="")
+BREVO_SENDER_NAME = env("BREVO_SENDER_NAME", default="ResQGrid")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="ResQGrid <noreply@resqGrid.com>")

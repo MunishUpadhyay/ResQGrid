@@ -79,6 +79,12 @@ CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(',') if 
 csrf_trusted = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_trusted.split(',') if origin.strip()] if csrf_trusted else []
 
+# Email Configuration — Production default to SMTP
+# Brevo HTTPS API Email Configuration
+BBEVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
+BREVO_SENDER_EMAIL = os.environ.get('BREVO_SENDER_EMAIL', '')
+BREVO_SENDER_NAME = os.environ.get('BREVO_SENDER_NAME', 'ResQGrid')
+
 # Logging
 LOGGING = {
     'version': 1,
@@ -93,3 +99,4 @@ LOGGING = {
         'level': 'WARNING',
     },
 }
+
