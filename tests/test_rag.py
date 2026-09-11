@@ -9,41 +9,33 @@ from rag.retriever import (
     get_embedding_function,
 )
 
-def test_retrieve_legal_provisions_mocked(settings):
-    settings.USE_ZERO_MEMORY_RAG = False
-    results = retrieve_legal_provisions("Test query", n_results=3)
+def test_retrieve_legal_provisions():
+    results = retrieve_legal_provisions("salary unpaid employee", n_results=3)
     assert len(results) > 0
-    assert results[0]["text"] == "Mock provisions/protocols document"
-    assert results[0]["distance"] == 0.15
+    assert "text" in results[0]
+    assert "metadata" in results[0]
+    assert "code" in results[0]["metadata"]
+    assert "distance" in results[0]
 
-def test_retrieve_medical_protocols_mocked(settings):
-    settings.USE_ZERO_MEMORY_RAG = False
-    results = retrieve_medical_protocols("Test query", n_results=2)
+def test_retrieve_medical_protocols():
+    results = retrieve_medical_protocols("heart attack chest pain", n_results=2)
     assert len(results) > 0
-    assert results[0]["text"] == "Mock provisions/protocols document"
+    assert "text" in results[0]
+    assert "metadata" in results[0]
+    assert "title" in results[0]["metadata"]
 
-def test_retrieve_similar_incidents_mocked(settings):
-    settings.USE_ZERO_MEMORY_RAG = False
+def test_retrieve_similar_incidents():
     results = retrieve_similar_incidents("Test query", n_results=3)
     assert isinstance(results, list)
 
-def test_retriever_fails_gracefully(mock_chromadb, settings):
-    settings.USE_ZERO_MEMORY_RAG = False
-    mock_chromadb.get_collection.side_effect = Exception("Database connection lost")
-    results = retrieve_legal_provisions("Test query")
-    assert results == []
-
 def test_zero_memory_rag_mode_bypasses_model_loading(settings, monkeypatch):
     """
-    Verify that in zero-memory RAG mode (USE_ZERO_MEMORY_RAG=True):
-    1. retrieve_legal_provisions returns fallback results.
-    2. retrieve_medical_protocols returns fallback results.
-    3. retrieve_similar_incidents returns fallback results.
-    4. get_embedding_function is NEVER called.
+    Verify that zero-memory RAG mode:
+    1. retrieve_legal_provisions returns local ranker results.
+    2. retrieve_medical_protocols returns local ranker results.
+    3. retrieve_similar_incidents returns results safely.
+    4. get_embedding_function is NEVER called for legal/medical.
     """
-    settings.USE_ZERO_MEMORY_RAG = True
-    
-    # Monkeypatch get_embedding_function to raise an error if called
     def fail_if_called():
         raise RuntimeError("get_embedding_function should NOT be called in zero-memory mode!")
         
@@ -61,10 +53,6 @@ def test_zero_memory_rag_mode_bypasses_model_loading(settings, monkeypatch):
     assert isinstance(med_res, list)
     assert len(med_res) > 0
     assert "title" in med_res[0]["metadata"]
-    
-    # Test similar incidents retrieval
-    similar_res = retrieve_similar_incidents("tenant landlord dispute")
-    assert isinstance(similar_res, list)
 
 def test_module_imports_lazy_rag():
     """

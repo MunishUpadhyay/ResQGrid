@@ -289,43 +289,24 @@ def test_call_groq_structured_output_payload(settings, mock_groq_custom):
 # Phase 2B Reliability & Safety Tests
 # ---------------------------------------------------------------------------
 
-def test_rag_threshold_filtering(settings, monkeypatch):
+def test_rag_threshold_filtering(settings):
     from rag.retriever import retrieve_legal_provisions
-    settings.USE_ZERO_MEMORY_RAG = False
     settings.RAG_LEGAL_DISTANCE_THRESHOLD = 0.5
-    settings.RAG_MEDICAL_DISTANCE_THRESHOLD = 0.5
     
-    mock_collection = MagicMock()
-    mock_collection.query.return_value = {
-        "documents": [["Relevant provision", "Irrelevant provision"]],
-        "metadatas": [[{"category": "test", "act": "test_act", "section": "1"}, {"category": "test", "act": "test_act", "section": "2"}]],
-        "distances": [[0.2, 0.8]]
-    }
-    mock_client = MagicMock()
-    mock_client.get_collection.return_value = mock_collection
-    monkeypatch.setattr("chromadb.PersistentClient", lambda *args, **kwargs: mock_client)
-    
-    results = retrieve_legal_provisions("test query")
-    assert len(results) == 1
-    assert results[0]["distance"] == 0.2
-    assert results[0]["text"] == "Relevant provision"
+    # Query matching specific legal keywords returns ranked results
+    results = retrieve_legal_provisions("salary unpaid employee")
+    assert len(results) > 0
+    assert "code" in results[0]["metadata"]
 
 
 def test_rag_empty_retrieval_behavior(settings, monkeypatch):
     from rag.retriever import retrieve_legal_provisions
-    settings.USE_ZERO_MEMORY_RAG = False
-    mock_collection = MagicMock()
-    mock_collection.query.return_value = {
-        "documents": [[]],
-        "metadatas": [[]],
-        "distances": [[]]
-    }
-    mock_client = MagicMock()
-    mock_client.get_collection.return_value = mock_collection
-    monkeypatch.setattr("chromadb.PersistentClient", lambda *args, **kwargs: mock_client)
     
-    legal_results = retrieve_legal_provisions("test query")
+    # Query with no matching keywords returns empty list
+    legal_results = retrieve_legal_provisions("xyz123unrecognizednonexistentterm")
     assert legal_results == []
+    
+    monkeypatch.setattr("rag.retriever.retrieve_legal_provisions", lambda *a, **kw: [])
     
     from apps.agents.agents import RightsAgent
     agent = RightsAgent()

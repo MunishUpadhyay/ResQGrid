@@ -6,7 +6,6 @@ Ingests Indian legal provisions into a ChromaDB vector store.
 import logging
 import chromadb
 from chromadb.config import Settings
-from chromadb.utils import embedding_functions
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +22,6 @@ def ingest_legal_documents():
         settings=Settings(anonymized_telemetry=False)
     )
     
-    # 2. Use local sentence-transformers model
-    emb_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name="all-MiniLM-L6-v2"
-    )
     
     # 3. Delete old collection if exists to avoid stale records, then create/get
     try:
@@ -34,8 +29,7 @@ def ingest_legal_documents():
     except Exception:
         pass
     collection = client.get_or_create_collection(
-        name="legal_provisions",
-        embedding_function=emb_fn
+        name="legal_provisions"
     )
 
     # 4. Map centralized database to Chroma documents format
@@ -81,10 +75,6 @@ def ingest_medical_protocols():
         settings=Settings(anonymized_telemetry=False)
     )
     
-    # 2. Use local sentence-transformers model
-    emb_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name="all-MiniLM-L6-v2"
-    )
     
     # 3. Delete old collection if exists to avoid stale records, then create/get
     try:
@@ -92,8 +82,7 @@ def ingest_medical_protocols():
     except Exception:
         pass
     collection = client.get_or_create_collection(
-        name="medical_protocols",
-        embedding_function=emb_fn
+        name="medical_protocols"
     )
 
     # 4. Core medical protocols from centralized medical reference database
@@ -137,8 +126,7 @@ def ingest_incident_to_history(incident_id: str, situation_brief: str,
     """
     from datetime import datetime, timezone
     import chromadb
-    from chromadb.utils import embedding_functions
-
+    
     logger.info("[ingest_incident_to_history] Ingesting incident_id=%s to incident_history", incident_id)
     try:
         # 1. Initialize persistent client
@@ -147,15 +135,10 @@ def ingest_incident_to_history(incident_id: str, situation_brief: str,
             settings=Settings(anonymized_telemetry=False)
         )
         
-        # 2. Use local sentence-transformers model
-        emb_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name="all-MiniLM-L6-v2"
-        )
         
         # 3. Create or get collection
         collection = client.get_or_create_collection(
-            name="incident_history",
-            embedding_function=emb_fn
+            name="incident_history"
         )
         
         # 4. Ingest/upsert the incident

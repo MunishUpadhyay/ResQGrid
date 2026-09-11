@@ -43,9 +43,6 @@ groq==0.13.1                  # Official Groq Python client
 chromadb==0.6.3               # Vector store for RAG
 langchain==0.3.25             # LangChain orchestration
 langchain-community==0.3.24   # Community integrations (ChromaDB, etc.)
-torch==2.1.2+cpu              # CPU-only version for Render compliance
-sentence-transformers==3.4.1   # For local embedding generation
-transformers==4.44.2          # Pinned for PyTorch 2.1.2 pytree compatibility
 numpy==1.26.4                 # Pinned for PyTorch 2.1.2 C-API compatibility
 
 # ---- Utilities ----
