@@ -1083,8 +1083,46 @@ def test_coordination_context_medical_remains_unchanged(monkeypatch):
     assert "Required facility: trauma_center" in user_msg
     assert "Response time: immediate" in user_msg
     assert "Hospital denial: False" in user_msg
-
-
-
-
-
+def test_legal_citation_normalization_and_validation():
+    """
+    Verify prefix normalization and case sensitivity handling in validate_legal_citation:
+    1. Exact existing database key ("SECTION 45")
+    2. Numeric section returned by LLM ("45")
+    3. Mixed case ("Section 45")
+    4. Case variation ("Constitution", "Article 21")
+    5. Nonexistent section remains unverified ("9999")
+    """
+    from apps.agents.legal_reference import validate_legal_citation
+    
+    # 1. Exact existing database key
+    res_exact = validate_legal_citation("CODE ON WAGES", "SECTION 45")
+    assert res_exact["verified"] is True
+    assert res_exact["section"] == "Section 45"
+    
+    # 2. Numeric section returned by LLM ("45")
+    res_numeric = validate_legal_citation("CODE ON WAGES", "45")
+    assert res_numeric["verified"] is True
+    assert res_numeric["section"] == "Section 45"
+    
+    # 3. Mixed case ("Section 45")
+    res_mixed = validate_legal_citation("code on wages", "Section 45")
+    assert res_mixed["verified"] is True
+    assert res_mixed["section"] == "Section 45"
+    
+    # 4. Case variation for Constitution and BNS
+    res_const = validate_legal_citation("Constitution", "Article 21")
+    assert res_const["verified"] is True
+    assert res_const["section"] == "Article 21"
+    
+    res_bns = validate_legal_citation("bns", "Section 101")
+    assert res_bns["verified"] is True
+    assert res_bns["section"] == "101"
+    
+    # 5. Nonexistent section remains unverified
+    res_nonexistent = validate_legal_citation("CODE ON WAGES", "9999")
+    assert res_nonexistent["verified"] is False
+    assert res_nonexistent["title"] == "Unverified legal provision"
+    
+    res_fake_code = validate_legal_citation("NONEXISTENT CODE", "45")
+    assert res_fake_code["verified"] is False
+    assert res_fake_code["title"] == "Unverified legal provision"

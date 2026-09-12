@@ -835,7 +835,7 @@ function showResult(result) {
                     <span class="ec-when loc-hi" lang="hi">24/7 कानूनी सहायता</span>
                 </a>
             `);
-        } else if (nearestAuth === 'Labour Court') {
+        } else if (result.contact === '14434' || (result.authority_to_contact || '').toLowerCase().includes('e-shram')) {
             buttons.push(`
                 <a href="tel:14434" class="emergency-card" style="border-color: var(--yellow);">
                     <span class="ec-name loc-en">Labour & Employment Helpline</span>
@@ -1716,7 +1716,7 @@ function showResultUnified(result) {
                     <span style="font-size:0.75rem; color:var(--text-secondary);">Free legal advice helpline</span>
                 </a>
             `);
-        } else if (nearestAuth === 'Labour Court') {
+        } else if (result.contact === '14434' || (result.authority_to_contact || '').toLowerCase().includes('e-shram')) {
             helplineButtons.push(`
                 <a href="tel:14434" class="emergency-card" style="display:flex; flex-direction:column; gap:4px; padding:var(--space-3); border:1px solid var(--accent-teal); border-radius:var(--radius-inner); background:rgba(22,140,140,0.05); text-decoration:none; color:var(--accent-teal); text-align:left;">
                     <span style="font-weight:bold; font-size:0.95rem;">📞 14434 — Labour & Employment Helpline</span>

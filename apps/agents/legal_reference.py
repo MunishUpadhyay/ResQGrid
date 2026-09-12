@@ -1,3 +1,4 @@
+import re
 import logging
 
 logger = logging.getLogger(__name__)
@@ -562,12 +563,14 @@ def validate_legal_citation(code: str, section: str) -> dict:
     """
     Validates if the generated section belongs to the stated code
     and returns its verified record (including legacy cross-references).
+    Supports prefix normalization ("45", "Section 45", "SECTION 45", "Article 21").
     """
     if not code or not section:
         return _unverified_record(code, section)
         
     code_clean = code.strip().upper()
-    section_clean = section.strip()
+    sec_raw = section.strip()
+    sec_upper = sec_raw.upper()
     
     # Handle normalized names or aliases
     if code_clean == "BHARATIYA NYAYA SANHITA" or code_clean == "BNS":
@@ -590,9 +593,23 @@ def validate_legal_citation(code: str, section: str) -> dict:
         code_clean = "LEGAL SERVICES ACT"
     elif code_clean == "SUPREME COURT RULING":
         code_clean = "SUPREME COURT RULING"
-        
-    key = (code_clean, section_clean)
-    record = VERIFIED_LEGAL_DATABASE.get(key)
+
+    # Extract bare section identifier by stripping SECTION / ARTICLE prefixes
+    sec_bare = re.sub(r'^(SECTION|SEC\.|SEC|ARTICLE|ART\.|ART)\s+', '', sec_upper, flags=re.IGNORECASE).strip()
+
+    candidate_keys = [
+        (code_clean, sec_upper),
+        (code_clean, sec_bare),
+        (code_clean, f"SECTION {sec_bare}"),
+        (code_clean, f"ARTICLE {sec_bare}")
+    ]
+
+    record = None
+    for k in candidate_keys:
+        if k in VERIFIED_LEGAL_DATABASE:
+            record = VERIFIED_LEGAL_DATABASE[k]
+            break
+
     if record:
         return {
             "code": record["code"],
@@ -606,6 +623,7 @@ def validate_legal_citation(code: str, section: str) -> dict:
         }
         
     return _unverified_record(code, section)
+
 
 def _unverified_record(code: str, section: str) -> dict:
     return {
